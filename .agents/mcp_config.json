@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "next-devtools": {
+      "command": "npx.cmd",
+      "args": ["-y", "next-devtools-mcp@0.4.0"]
+    },
+    "playwright": {
+      "command": "npx.cmd",
+      "args": ["-y", "@playwright/mcp@0.0.79", "--isolated"]
+    },
+    "chrome-devtools": {
+      "command": "npx.cmd",
+      "args": ["-y", "chrome-devtools-mcp@1.7.0", "--isolated", "--no-usage-statistics"]
+    }
+  }
+}
