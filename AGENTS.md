@@ -4,8 +4,9 @@
 
 - Read `doc/moresimple.md` before changing the experience, layout, copy, or animation direction.
 - Read `doc/MOTION_ARCHITECTURE.md` before changing animation code, libraries, section ownership, or transitions. Its ownership table is mandatory.
+- Read `doc/WORK_TO_CASES.md` before touching the Work section, the Case Studies section, the shared stage, or the Salam Cargo visual. It records how the built transition works, the numbers it runs on, and what is verified.
 - Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-motion, or animation-performance tasks.
-- This repository currently contains the approved brief and AI tooling only. Do not scaffold the application unless the user asks.
+- The application is scaffolded. Built so far: Hero, the `hero-to-work` handoff, Work, the `work-to-cases` handoff, and the Case Studies opening. Everything from the flagship's pinned chapters onward is still to come — see the end of `doc/WORK_TO_CASES.md`.
 
 ## Planned stack
 
