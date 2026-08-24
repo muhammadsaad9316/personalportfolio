@@ -1,0 +1,587 @@
+/* Work — CSS owns layout, colour and static styling only.
+   GSAP owns transform/opacity on [data-work-reveal], [data-project-motion],
+   [data-centre], [data-centre-pointer], [data-centre-branch],
+   [data-centre-packet], [data-hub-dot] and the connector dash
+   values, and on [data-cases-out] during the handoff to Case Studies.
+   See doc/MOTION_ARCHITECTURE.md. */
+
+.work {
+  position: relative;
+  /* Inside the stage's own stacking context, above the Case Studies panel it
+     shares a cell with: the Salam Cargo frame travels while still parented
+     here and has to pass over the case column, not under it. The hero still
+     covers all of this — the stage sits below .heroScene. */
+  z-index: 2;
+  /* Deliberately transparent. The cream ground is on .experience and .stage,
+     so the Case Studies panel underneath stays visible through this section
+     as it leaves. Both read the same --work-cream token. */
+  background: transparent;
+  /* Exactly one viewport, so the pin releasing lands a complete frame. */
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: clamp(32px, 4.5vh, 76px);
+}
+
+/* work-to-cases motion layer around the whole intro block. The Work entrance
+   owns [data-work-reveal] inside it; this wrapper has no other job. */
+.introOut {
+  min-width: 0;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 27fr) minmax(0, 73fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 76px);
+  width: 100%;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+/* ------------------------------------------------------------------ intro */
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.62em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.68rem, 0.78vw, 0.8rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.eyebrowSlash {
+  opacity: 0.5;
+}
+
+.heading {
+  margin-top: clamp(20px, 3vh, 38px);
+  font-size: clamp(2.1rem, 3.5vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+
+.headingAccent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.06em;
+  letter-spacing: -0.012em;
+  color: var(--accent);
+}
+
+.lede {
+  margin-top: clamp(18px, 2.6vh, 32px);
+  max-width: 26ch;
+  font-size: clamp(0.9rem, 1.02vw, 1.04rem);
+  line-height: 1.62;
+  color: var(--text-muted);
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: clamp(24px, 3.4vh, 44px);
+  padding-bottom: 6px;
+  border-bottom: 1px solid transparent;
+  font-family: var(--font-mono);
+  font-size: clamp(0.7rem, 0.8vw, 0.82rem);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  transition:
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.viewAll svg {
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.viewAll:hover {
+  border-bottom-color: var(--accent);
+  color: var(--accent-hover);
+}
+
+.viewAll:hover svg {
+  transform: translateX(5px);
+}
+
+/* ---------------------------------------------------------------- network */
+
+.network {
+  position: relative;
+  /* Tall enough for two stacked cards plus a gap. Matches the SVG viewBox.
+     Height-capped so the whole section stays inside one viewport. */
+  aspect-ratio: 1000 / 760;
+  height: min(780px, calc(100svh - clamp(120px, 17vh, 210px)));
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* Transition layer around each SVG. `work-to-cases` owns its transform and
+   opacity; the Work entrance owns the paths and the circle inside it. */
+.svgLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.wires,
+.centre {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.wire,
+.wireActive {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.wire {
+  stroke: #d3dbc5;
+  stroke-width: 1.1;
+}
+
+.wireActive {
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.traceNode {
+  fill: #d3dbc5;
+}
+
+.traceNodeActive {
+  fill: var(--accent);
+}
+
+.tracePacket {
+  fill: var(--text);
+}
+
+.tracePulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+
+.ring {
+  fill: none;
+  stroke: #cfdcb4;
+  stroke-width: 15;
+  stroke-linecap: round;
+}
+
+.pointerBounds {
+  fill: transparent;
+}
+
+.gitBranch {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.commitNode,
+.branchNode,
+.dataPacket {
+  fill: var(--accent);
+}
+
+.hubDot {
+  fill: var(--accent);
+}
+
+/* --------------------------------------------------------------- projects */
+
+.projects {
+  position: absolute;
+  inset: 0;
+}
+
+.project {
+  position: absolute;
+  width: 38%;
+}
+
+.topLeft {
+  left: 0;
+  top: 0;
+}
+
+.topRight {
+  right: 0;
+  top: 0;
+}
+
+.bottomRight {
+  right: 0;
+  bottom: 0;
+}
+
+.bottomLeft {
+  left: 0;
+  bottom: 0;
+}
+
+/* The flagship paints above its siblings: its frame travels across them on
+   the way to the case study, while they are still fading out. */
+.flagship {
+  z-index: 2;
+}
+
+/* GSAP motion layer. Never given a CSS transition. */
+.projectMotion {
+  will-change: transform, opacity;
+}
+
+/* work-to-cases motion layer. Also never given a CSS transition. */
+.projectOut {
+  display: block;
+}
+
+.projectLink {
+  display: block;
+  border-radius: var(--radius);
+}
+
+.projectMeta {
+  display: block;
+}
+
+.projectLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+}
+
+.projectHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.projectDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.projectNum {
+  font-family: var(--font-mono);
+  font-size: clamp(0.68rem, 0.8vw, 0.84rem);
+  color: var(--text-muted);
+}
+
+.projectName {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(0.98rem, 1.28vw, 1.32rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.projectKind {
+  display: block;
+  margin-top: 3px;
+  font-size: clamp(0.78rem, 0.92vw, 0.95rem);
+  color: var(--text-muted);
+}
+
+.projectFrame {
+  display: block;
+  margin-top: clamp(10px, 1.4vh, 18px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(20, 18, 14, 0.04),
+    0 18px 40px -26px rgba(20, 18, 14, 0.3);
+}
+
+.previewImage,
+.previewArt {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The one frame that leaves the card. Promoted only where it actually
+   travels. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and
+  (prefers-reduced-motion: no-preference) {
+  .flagship .projectFrame {
+    border: 0;
+    box-shadow:
+      inset 0 0 0 1px var(--line),
+      0 1px 2px rgba(20, 18, 14, 0.04),
+      0 18px 40px -26px rgba(20, 18, 14, 0.3);
+    will-change: transform;
+  }
+}
+
+.projectSummary {
+  display: block;
+  margin-top: 11px;
+  font-size: clamp(0.72rem, 0.84vw, 0.86rem);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------- preview artwork */
+
+.artSurface {
+  fill: #fbfaf7;
+}
+
+.artSurfaceDark {
+  fill: #131313;
+}
+
+.artRail {
+  fill: #1d3b2a;
+}
+
+.artRailMark {
+  fill: #7fae6a;
+}
+
+.artRailLine {
+  fill: #37543f;
+}
+
+.artBar {
+  fill: #eef1f6;
+}
+
+.artBand {
+  fill: #1c3055;
+}
+
+.artBandLight {
+  fill: #f3f1ec;
+}
+
+.artBandStrong {
+  fill: #dfe6f2;
+}
+
+.artBandFaint {
+  fill: #7c8ca8;
+}
+
+.artTile {
+  fill: #f2efe9;
+}
+
+.artStrong {
+  fill: #23241f;
+}
+
+.artFaint {
+  fill: #c8c4bc;
+}
+
+.artFaintSolid {
+  fill: #ddd8cf;
+}
+
+.artAccent {
+  fill: var(--accent);
+}
+
+.artAccentSolid {
+  fill: var(--accent);
+}
+
+.artInk {
+  fill: #1a1a17;
+}
+
+.artFigure {
+  fill: #cdd6c0;
+}
+
+.artChart {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.artDarkStrong {
+  fill: #ecebe6;
+}
+
+.artDarkFaint {
+  fill: #6a6a64;
+}
+
+.artCar {
+  fill: #2c2c2c;
+}
+
+.artWheel {
+  fill: #0b0b0b;
+  stroke: #4a4a4a;
+  stroke-width: 2;
+}
+
+.artWheelHub {
+  fill: #3a3a3a;
+}
+
+.artGleam {
+  fill: none;
+  stroke: #3a3a3a;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---------------------------------------------------------- cursor label */
+
+.cursorLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -18px 0 0 -70px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--text-invert);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 900px) {
+  .projectSummary {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Below this the two stacked cards cannot fit the frame with a summary. */
+@media (min-width: 900px) and (max-height: 780px) {
+  .projectSummary {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------ breakpoints */
+
+@media (max-width: 1179px) {
+  .inner {
+    grid-template-columns: minmax(0, 32fr) minmax(0, 68fr);
+  }
+
+  .project {
+    width: 38%;
+  }
+
+  .projectSummary {
+    display: none;
+  }
+}
+
+/* Stacked composition for tablet, mobile and touch. No hover dependency,
+   no absolute network, everything readable in document order. */
+@media (max-width: 899px) {
+  .work {
+    display: block;
+    min-height: 0;
+    padding-block: clamp(56px, 9vh, 96px);
+  }
+
+  .inner {
+    display: block;
+  }
+
+  .projectSummary {
+    display: block;
+  }
+
+  .lede {
+    max-width: 42ch;
+  }
+
+  .network {
+    position: static;
+    height: auto;
+    margin-top: clamp(36px, 6vh, 64px);
+    aspect-ratio: auto;
+  }
+
+  /* Without the 2x2 network there is nothing to connect, and the ring's
+     viewBox is far wider than a phone can show it at a useful size. The
+     stacked version is a direct list instead. */
+  .svgLayer {
+    display: none;
+  }
+
+  .projects {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: clamp(26px, 5vw, 44px);
+  }
+
+  .project,
+  .topLeft,
+  .topRight,
+  .bottomRight,
+  .bottomLeft {
+    position: static;
+    width: 100%;
+    inset: auto;
+  }
+
+  .flagship {
+    z-index: auto;
+  }
+
+  .projectSummary {
+    display: block;
+  }
+
+  .cursorLabel {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .projects {
+    grid-template-columns: 1fr;
+  }
+}

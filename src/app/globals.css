@@ -1,0 +1,121 @@
+/* Design tokens and base reset.
+   CSS owns layout, typography, colour and static styling only.
+   Motion on animated elements belongs to GSAP (see doc/MOTION_ARCHITECTURE.md). */
+
+:root {
+  /* Surfaces */
+  --cream: #f6f3f1;
+  --cream-2: #efebe7;
+  /* Work background AND the expanding torso mask read this one token.
+     They must stay identical or the Hero -> Work handoff shows a seam. */
+  --work-cream: #fcf9f4;
+  --card: #fbf9f7;
+  --ink: #0f0f0e;
+  --ink-2: #161716;
+  --ink-3: #1f1f1f;
+
+  /* Text */
+  --text: #12120f;
+  --text-muted: #6e6b66;
+  --text-invert: #f4f3f1;
+  --text-invert-muted: #8d8d88;
+
+  /* Accent */
+  --accent: #74982c;
+  --accent-hover: #648427;
+  --accent-bright: #a6ce59;
+
+  /* Lines */
+  --line: #e3ded8;
+  --line-dark: #262626;
+
+  /* Rhythm */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --gutter: clamp(20px, 3.2vw, 56px);
+  --shell: 1560px;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Mono", Menlo, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+.skipLink {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--text-invert);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: top 0.18s ease;
+}
+
+.skipLink:focus-visible {
+  top: 12px;
+}

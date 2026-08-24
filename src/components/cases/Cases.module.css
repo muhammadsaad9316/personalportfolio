@@ -1,0 +1,220 @@
+/* Case Studies — CSS owns layout, colour and static styling only.
+   GSAP owns transform/opacity on [data-cases-in] and on the Salam Cargo frame
+   that travels in from Work. See doc/MOTION_ARCHITECTURE.md. */
+
+.cases {
+  position: relative;
+  /* Inside the stage's stacking context, below .work — the Salam Cargo frame
+     travels while still parented to Work and must pass OVER this column, not
+     under it. The two never overlap once landed. */
+  z-index: 1;
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: clamp(56px, 9vh, 96px);
+}
+
+.panel {
+  display: grid;
+  grid-template-columns: minmax(0, 42fr) minmax(0, 55fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 72px);
+  width: 100%;
+  max-width: var(--shell);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.copy {
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------------ intro */
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.62em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.68rem, 0.78vw, 0.8rem);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.eyebrowSlash {
+  opacity: 0.5;
+}
+
+.heading {
+  margin-top: clamp(16px, 2.4vh, 30px);
+  max-width: 15ch;
+  font-size: clamp(1.85rem, 2.7vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.032em;
+  color: var(--text);
+}
+
+.headingAccent {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.06em;
+  letter-spacing: -0.012em;
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------- the study */
+
+.study {
+  margin-top: clamp(26px, 4.2vh, 52px);
+  padding-top: clamp(20px, 3vh, 34px);
+  border-top: 1px solid var(--line);
+}
+
+.studyNum {
+  display: flex;
+  align-items: center;
+  gap: 0.62em;
+  font-family: var(--font-mono);
+  font-size: clamp(0.66rem, 0.76vw, 0.78rem);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.studyName {
+  margin-top: clamp(12px, 1.8vh, 20px);
+  font-size: clamp(1.7rem, 2.6vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+
+.studyKind {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 0.84vw, 0.86rem);
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.studyIntro {
+  margin-top: clamp(14px, 2.2vh, 24px);
+  max-width: 38ch;
+  font-size: clamp(0.92rem, 1.05vw, 1.08rem);
+  line-height: 1.62;
+  color: var(--text-muted);
+}
+
+/* ----------------------------------------------------------- the visual */
+
+/* Mobile keeps the source ratio; desktop overrides this into the full-bleed
+   landing slot used by the travelling Work frame. */
+.visual {
+  position: relative;
+  aspect-ratio: 1500 / 958;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(20, 18, 14, 0.04),
+    0 30px 70px -40px rgba(20, 18, 14, 0.45);
+}
+
+.visualImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ----------------------------------------------------------------- modes */
+
+/* Full-bleed split frame on desktop. Copy stays first in document order, but
+   the visual occupies the left side and the copy occupies the right. */
+@media (min-width: 900px) {
+  .cases {
+    padding-block: 0;
+  }
+
+  .panel {
+    grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+    grid-template-areas: "visual copy";
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+    max-width: none;
+    height: 100svh;
+    margin: 0;
+    padding: 0;
+  }
+
+  .copy {
+    grid-area: copy;
+    align-self: center;
+    padding-inline: clamp(48px, 5.5vw, 96px);
+  }
+
+  .visual {
+    grid-area: visual;
+    height: 100%;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* Cinematic path. The slot is a measurement target only — the Work frame
+   supplies the border, the shadow and the picture when it lands. The image
+   itself stays in the accessible tree and simply does not paint. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and
+  (prefers-reduced-motion: no-preference) {
+  .cases {
+    padding-block: 0;
+  }
+
+  .visual {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .visualImage {
+    opacity: 0;
+  }
+}
+
+/* Stacked reading order for tablet, mobile and touch. Nothing travels here,
+   so the slot shows its own image. */
+@media (max-width: 899px) {
+  .cases {
+    display: block;
+    min-height: 0;
+  }
+
+  .panel {
+    display: block;
+  }
+
+  .copy {
+    padding-inline: 0;
+  }
+
+  .heading {
+    max-width: 22ch;
+  }
+
+  .studyIntro {
+    max-width: 46ch;
+  }
+
+  .visual {
+    margin-top: clamp(28px, 5vh, 48px);
+  }
+}

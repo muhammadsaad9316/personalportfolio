@@ -1,0 +1,99 @@
+/* Shared Hero / Work / Case Studies wrapper.
+   CSS owns layout and the cream ground. GSAP owns transform/opacity on
+   .heroScene, .heroInner, .wash and on the elements inside the stage.
+   See doc/MOTION_ARCHITECTURE.md. */
+
+.experience {
+  position: relative;
+  /* The ground the whole handoff happens on. Because this is already the
+     Work colour, nothing can flash between the wash reaching full and Work
+     arriving underneath it. */
+  background: var(--work-cream);
+}
+
+.heroScene {
+  position: relative;
+  /* Above Work, which sits directly below it in the document and must stay
+     hidden until the transition hands over. */
+  z-index: 2;
+  overflow: hidden;
+  background: var(--work-cream);
+}
+
+.heroInner {
+  position: relative;
+  will-change: transform, opacity;
+}
+
+/* ---------------------------------------------------------------- stage */
+
+/* Work and the first case study, in one place so the Salam Cargo preview can
+   travel between them. Cream lives here — Work itself is transparent — so the
+   two compositions share one uninterrupted ground, exactly as the Hero handoff
+   requires. */
+.stage {
+  position: relative;
+  /* Below .heroScene, and a stacking context of its own so the order between
+     Work and the case panel inside it cannot escape. */
+  z-index: 1;
+  background: var(--work-cream);
+}
+
+.stageSticky {
+  position: relative;
+}
+
+/* The wash that completes the handoff. Fixed, so it covers the viewport
+   through the scroll jump, and animated only on opacity so it never reads as
+   a shape moving over the screen. Same token as the Work background — they
+   must never drift apart. */
+.wash {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--work-cream);
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
+
+/* Locked to the same 900px breakpoint the Hero and Work layouts use, so a
+   narrow desktop window never runs the transition against a hero that is
+   taller than one screen. */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and
+  (prefers-reduced-motion: no-preference) {
+  .heroScene {
+    height: 100svh;
+  }
+
+  .heroInner {
+    height: 100%;
+  }
+
+  /* Two rest positions for one sticky viewport: Work, then the landed case
+     study a viewport further down. Nothing scrubs — `work-to-cases` plays on
+     a gesture, the way the Hero handoff does — so this range exists only to
+     give the study a scroll position of its own, and every position inside it
+     renders the same sticky frame. The move's pace is FORWARD_TIME in
+     workToCases.ts, not this height. */
+  .stage {
+    height: 200svh;
+  }
+
+  .stageSticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    /* One cell, two compositions. Both are full-size; the transition decides
+       which one is legible. */
+    display: grid;
+    grid-template-columns: 100%;
+    grid-template-rows: 100%;
+  }
+
+  .stageSticky > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+}

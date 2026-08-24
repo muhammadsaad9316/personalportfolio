@@ -1,0 +1,881 @@
+/* Hero — CSS owns layout, colour and static styling.
+   GSAP owns transform/opacity on [data-depth], [data-reveal], [data-line]
+   and the person/backdrop layers. The only transforms declared here are
+   static from-states (never transitions or keyframes) so the first paint
+   matches the GSAP start values. See doc/MOTION_ARCHITECTURE.md. */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--cream);
+}
+
+/* ---------------------------------------------------------------- backdrop */
+
+/* Holds every ground layer so the transition can retire them together.
+   GSAP owns this element's opacity; the pointer handler owns the glow and
+   grid opacity on the children inside it. */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* The developer-side ground. GSAP owns this element's opacity during the
+   Hero -> Work handoff; the pointer handler owns the glow and grid opacity
+   on the children inside it. */
+.backdropDark {
+  position: absolute;
+  inset: 0;
+}
+
+.canvasLight {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--cream);
+}
+
+.darkPanel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 62%;
+  z-index: 1;
+  will-change: transform;
+}
+
+.darkPanelFill {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+}
+
+.designerGlow,
+.devGrid {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.designerGlow {
+  inset: 0;
+  background: radial-gradient(
+    58% 52% at 24% 44%,
+    rgba(255, 250, 236, 0.95),
+    rgba(246, 243, 241, 0) 72%
+  );
+}
+
+.devGrid {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 0;
+  background-image:
+    linear-gradient(rgba(166, 206, 89, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(166, 206, 89, 0.07) 1px, transparent 1px),
+    radial-gradient(
+      52% 46% at 74% 46%,
+      rgba(116, 152, 44, 0.22),
+      transparent 72%
+    );
+  background-size:
+    52px 52px,
+    52px 52px,
+    100% 100%;
+}
+
+/* ------------------------------------------------------------------ shell */
+
+.inner {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--shell);
+  min-height: 100svh;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  padding-block: clamp(18px, 2.6vh, 34px) 0;
+}
+
+/* ----------------------------------------------------------------- header */
+
+.header {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.logo {
+  font-size: clamp(1.45rem, 1.85vw, 1.85rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.logoDot {
+  color: var(--accent);
+}
+
+.nav {
+  margin-left: clamp(28px, 11vw, 180px);
+}
+
+.navList {
+  display: flex;
+  gap: clamp(18px, 2.3vw, 42px);
+}
+
+.navLink {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 7px;
+  font-size: clamp(0.82rem, 0.95vw, 0.95rem);
+  color: var(--text);
+}
+
+.navLink::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navLink:hover::after,
+.navLinkCurrent::after {
+  transform: scaleX(1);
+}
+
+.connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  padding: clamp(11px, 1.3vw, 15px) clamp(16px, 1.6vw, 24px);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 8px;
+  color: #f2f0ec;
+  font-size: clamp(0.82rem, 0.95vw, 0.95rem);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.connect:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ stage */
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  /* Shared so the code block can position itself clear of the figure.
+     Both are positioned against .stage, so the % resolves identically. */
+  --person-width: min(26%, 415px);
+  --person-centre: 48%;
+}
+
+/* GSAP pointer layer. Never styled with transitions. */
+.layer {
+  will-change: transform;
+}
+
+.reveal {
+  will-change: transform, opacity;
+}
+
+/* ------------------------------------------------------------------- copy */
+
+.copy {
+  position: absolute;
+  left: 0;
+  top: 44%;
+  /* Static centring transform on the wrapper; GSAP animates the .layer
+     inside it, so the two never touch the same element. */
+  transform: translateY(-50%);
+  width: clamp(266px, 25.5%, 400px);
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  font-size: clamp(0.68rem, 0.78vw, 0.8rem);
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.headline {
+  margin-top: clamp(15px, 2.2vh, 30px);
+  font-size: clamp(2rem, 3.42vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.038em;
+}
+
+.lineMask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.045em;
+}
+
+.line {
+  display: block;
+  /* Each authored line is one masked reveal. It must never wrap, or the
+     mask clips half of it. */
+  white-space: nowrap;
+}
+
+.accentLine {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.07em;
+  letter-spacing: -0.012em;
+  color: var(--accent);
+}
+
+.lede {
+  margin-top: clamp(18px, 2.8vh, 36px);
+  max-width: 32ch;
+  font-size: clamp(0.9rem, 1.05vw, 1.06rem);
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.ctaRow {
+  margin-top: clamp(22px, 3.4vh, 44px);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(13px, 1.6vw, 18px) clamp(20px, 2vw, 28px);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: clamp(0.88rem, 1vw, 1rem);
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.cta:hover {
+  background: var(--accent-hover);
+}
+
+.ctaArrow {
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cta:hover .ctaArrow {
+  transform: translateX(4px);
+}
+
+/* --------------------------------------------------------- design cluster */
+
+.designCluster {
+  position: absolute;
+  left: 26.5%;
+  top: 8%;
+  /* Above the figure: these cards read as artefacts held in front of him. */
+  z-index: 5;
+  width: clamp(150px, 15%, 232px);
+}
+
+.designCluster > .layer + .layer {
+  margin-top: clamp(14px, 2.6vh, 32px);
+}
+
+.designCluster > .layer:nth-child(2) .card,
+.designCluster > .layer:nth-child(3) .card,
+.designCluster > .layer:nth-child(4) .dotGrid {
+  width: 60%;
+}
+
+.card {
+  padding: clamp(10px, 0.95vw, 15px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(20, 18, 14, 0.04),
+    0 14px 34px -22px rgba(20, 18, 14, 0.28);
+}
+
+.cardTitle {
+  font-size: clamp(0.62rem, 0.72vw, 0.75rem);
+  font-weight: 600;
+}
+
+.cardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.cardLabel {
+  font-size: clamp(0.58rem, 0.68vw, 0.7rem);
+  color: var(--text-muted);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: clamp(0.5rem, 0.58vw, 0.6rem);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chart {
+  width: 100%;
+  height: clamp(38px, 3.6vw, 54px);
+  margin-top: 12px;
+  overflow: visible;
+}
+
+.metric {
+  margin-top: 10px;
+  font-size: clamp(0.68rem, 0.8vw, 0.84rem);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.metricNote {
+  margin-top: 2px;
+  font-size: clamp(0.52rem, 0.62vw, 0.64rem);
+  color: var(--text-muted);
+}
+
+.typeSample {
+  font-size: clamp(1.9rem, 2.4vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #c8c4be;
+}
+
+.typeName {
+  margin-top: 5px;
+  font-size: clamp(0.54rem, 0.64vw, 0.66rem);
+  color: var(--text-muted);
+}
+
+.swatches {
+  display: flex;
+  gap: 6px;
+  margin-top: clamp(10px, 1.1vw, 16px);
+}
+
+.swatches li {
+  width: clamp(10px, 0.95vw, 13px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.swatchInk {
+  background: #17171a;
+}
+
+.swatchAccent {
+  background: var(--accent);
+}
+
+.swatchLight {
+  background: #dcd8d2;
+}
+
+.wireDots {
+  display: flex;
+  gap: 4px;
+}
+
+.wireDots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #dcd7d0;
+}
+
+.wireBody {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.wireCol:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 46%;
+}
+
+.wireCol:last-child {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.wireBox {
+  display: block;
+  aspect-ratio: 40 / 28;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: #e6e1da;
+}
+
+.wireBox svg {
+  width: 100%;
+  height: 100%;
+}
+
+.wireBar {
+  height: 4px;
+  border-radius: 2px;
+  background: #e9e5df;
+}
+
+.dotGrid {
+  height: clamp(42px, 4vw, 58px);
+  background-image: radial-gradient(
+    circle,
+    #d9d4cd 1.4px,
+    transparent 1.5px
+  );
+  background-size: 16px 16px;
+}
+
+/* ----------------------------------------------------------- code cluster */
+
+.codeCluster {
+  /* The code is the only thing on the developer side now, so it gets the
+     whole half to itself and sits on the optical centre. */
+  position: absolute;
+  left: calc(
+    var(--person-centre) + var(--person-width) / 2 + clamp(10px, 1.2vw, 26px)
+  );
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.code {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(0.68rem, 1vw, 1.02rem);
+  line-height: 2.15;
+  color: var(--text-invert);
+}
+
+.codeLine {
+  display: block;
+  white-space: pre;
+  min-height: 1.1em;
+}
+
+.lineNo {
+  display: inline-block;
+  width: 2.7em;
+  color: #57574f;
+  user-select: none;
+}
+
+.indent1 {
+  display: inline-block;
+  width: 1.8em;
+}
+
+.indent2 {
+  display: inline-block;
+  width: 3.6em;
+}
+
+.tKw {
+  color: #c9c9c1;
+}
+
+.tVar {
+  color: #eeece6;
+}
+
+.tKey {
+  color: #dfe6cf;
+}
+
+.tStr {
+  color: var(--accent-bright);
+}
+
+.tFn {
+  color: #dfe6cf;
+}
+
+.tPunc {
+  color: #7d7d76;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.5em;
+  height: 1.05em;
+  margin-left: 0.12em;
+  vertical-align: -0.2em;
+  background: #e8e6e0;
+}
+
+/* Centred on its own midpoint so it stays legible even when the label is
+   wider than the ring. */
+/* ----------------------------------------------------------------- person */
+
+.person {
+  position: absolute;
+  bottom: 0;
+  left: var(--person-centre);
+  z-index: 4;
+  width: var(--person-width);
+  /* Bounded on BOTH axes and `object-fit: contain` inside, so a short
+     viewport shrinks the figure instead of cropping his head. */
+  height: min(94%, 900px);
+  /* Centred with a negative margin, not a transform: GSAP owns `transform`
+     here and also clears the standalone `translate` property. */
+  margin-left: calc(var(--person-width) * -0.5);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.personReveal {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  will-change: transform, opacity;
+}
+
+.personImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+/* Developer grade. CSS owns the static filter, GSAP owns the opacity. */
+.personDark {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  filter: brightness(0.42) contrast(1.16) saturate(0.58) sepia(0.12)
+    hue-rotate(172deg);
+}
+
+/* ------------------------------------------------- GSAP from-states (SSR) */
+
+@media (prefers-reduced-motion: no-preference) {
+  .darkPanel {
+    transform: translateX(100%);
+  }
+
+  .personReveal {
+    opacity: 0;
+  }
+
+  .line {
+    transform: translateY(118%);
+  }
+
+  .hero [data-reveal],
+  .hero [data-term] {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------ breakpoints */
+
+@media (max-width: 1279px) {
+  .copy {
+    width: clamp(250px, 27%, 340px);
+  }
+
+  .designCluster {
+    left: 29%;
+    width: clamp(132px, 14%, 180px);
+  }
+
+  .codeCluster {
+    left: calc(var(--person-centre) + var(--person-width) / 2 + 14px);
+  }
+
+  .designCluster > .layer:nth-child(4) {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .nav {
+    display: none;
+  }
+
+  .designCluster {
+    display: none;
+  }
+
+  .copy {
+    width: min(46%, 360px);
+  }
+
+  .person {
+    --person-width: min(31%, 320px);
+  }
+
+  .stage {
+    --person-centre: 44%;
+    --person-width: min(30%, 330px);
+  }
+}
+
+@media (max-width: 767px) {
+  .hero {
+    min-height: auto;
+  }
+
+  .inner {
+    min-height: auto;
+    padding-bottom: clamp(26px, 6vh, 52px);
+  }
+
+  .darkPanel {
+    left: 0;
+    right: 0;
+    top: 46%;
+    bottom: -1px;
+    width: auto;
+  }
+
+  .devGrid {
+    left: 0;
+    top: 46%;
+  }
+
+  .designerGlow {
+    display: none;
+  }
+
+  .header {
+    gap: 14px;
+  }
+
+  .connect {
+    padding: 10px 15px;
+    font-size: 0.8rem;
+    border-color: rgba(20, 18, 14, 0.22);
+    color: var(--text);
+  }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    padding-top: clamp(24px, 5vh, 44px);
+  }
+
+  .copy,
+  .codeCluster,
+  .person {
+    position: static;
+    inset: auto;
+    width: 100%;
+    height: auto;
+  }
+
+  .copy {
+    transform: none;
+    max-width: 30rem;
+  }
+
+  .headline {
+    font-size: clamp(2.4rem, 12vw, 3.4rem);
+  }
+
+  .lede {
+    max-width: 34ch;
+  }
+
+  .person {
+    align-self: center;
+    left: auto;
+    margin-left: 0;
+    --person-width: min(66%, 290px);
+    width: var(--person-width);
+    height: auto;
+    aspect-ratio: 1300 / 2984;
+    margin: clamp(18px, 4vh, 34px) auto 0;
+  }
+
+  .codeCluster {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: clamp(-6px, -1vh, 0px);
+  }
+
+  .codeCluster > .layer {
+    position: static;
+    width: 100%;
+  }
+}
+
+/* -------------------------------------------------- card size modifiers */
+
+.cardDashboard {
+  width: 100%;
+}
+
+.cardType,
+.cardWire {
+  padding: clamp(9px, 0.85vw, 13px);
+}
+
+/* --------------------------------------- static per-item variations (CSS) */
+
+.wireBar:nth-child(1) {
+  width: 100%;
+}
+
+.wireBar:nth-child(2) {
+  width: 78%;
+}
+
+.wireBar:nth-child(3) {
+  width: 88%;
+}
+
+.wireBar:nth-child(4) {
+  width: 54%;
+}
+
+.wireBar:nth-child(5) {
+  width: 94%;
+}
+
+.wireBar:nth-child(6) {
+  width: 66%;
+}
+
+
+/* ------------------------------------------------ ambient / live elements */
+
+/* Developer-side circuit traces. GSAP owns the dash offset only. */
+.devSignals {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.devSignals path {
+  stroke: rgba(166, 206, 89, 0.34);
+}
+
+/* Light travelling down the split seam. */
+.seam {
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 2px;
+  height: 34%;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(166, 206, 89, 0.75),
+    transparent
+  );
+}
+
+/* Live indicators. */
+.liveDotInk {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 5px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.liveDotInk {
+  background: var(--accent);
+}
+
+.chartMarker {
+  fill: var(--accent);
+  stroke: var(--card);
+  stroke-width: 1.6;
+}
+
+/* Swatch row with a sliding selection ring. */
+.swatchRow {
+  position: relative;
+  margin-top: clamp(10px, 1.1vw, 16px);
+}
+
+.swatchRing {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: clamp(10px, 0.95vw, 13px);
+  aspect-ratio: 1;
+  margin-top: calc(clamp(10px, 0.95vw, 13px) / -2);
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  transform-origin: center;
+  scale: 1.6;
+}
+
+.swatches {
+  display: flex;
+  gap: 6px;
+}
+
+/* Highlight drifting across the dot grid. */
+.dotSweep {
+  position: absolute;
+  inset: -20% 0;
+  pointer-events: none;
+  background: radial-gradient(
+    38% 60% at 50% 50%,
+    rgba(116, 152, 44, 0.5),
+    transparent 70%
+  );
+}

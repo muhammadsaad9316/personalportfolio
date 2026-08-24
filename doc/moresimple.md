@@ -36,11 +36,11 @@ This transformation should be one of the main impressive moments of the website.
 When the visitor scrolls:
 
 1. The navigation, headline, and floating cards fade away.
-2. The person stays visible and slowly becomes larger.
-3. The black wave rises from the bottom.
-4. The screen becomes almost completely black.
-5. The black layer moves away.
-6. The cream Work section appears underneath.
+2. The person stays visible, moves toward the visitor, and slowly becomes larger.
+3. A flat cream mask inside the shirt or lower torso expands with the person.
+4. The cream mask grows until it covers the entire screen using the exact Work section background color.
+5. Once the screen is fully cream, the person and remaining Hero elements disappear.
+6. The Work section appears on the same cream background with no visible cut between the scenes.
 
 This transition should feel cinematic and be strong enough to use as a short social-media clip.
 
@@ -69,14 +69,16 @@ The interaction should clearly show that every project is connected to a real pr
 
 When the visitor finishes the Work section and continues scrolling:
 
-1. The four project previews fade slightly.
+1. The three secondary project previews fade and shrink slightly, while the **Salam Cargo** preview stays visible as the visual anchor.
 2. The connecting lines dissolve.
 3. The centre impact circle becomes smaller.
 4. The heading **Digital products. Real impact.** moves upward and fades.
 5. The section title appears:
    **CASE STUDIES**  
    **A closer look at the thinking behind the work.**
-6. The first case study smoothly fills the screen.
+6. The same Salam Cargo preview smoothly moves from its Work position and expands into a full-width, full-height visual covering the left side of the first case study.
+7. The Salam Cargo title and case-study information appear on the right after the visual settles. The preview must feel like one continuous element, with no visible replacement or cut.
+8. When the visitor scrolls backward, the transition reverses smoothly and the Salam Cargo visual returns to its exact position in the Work section.
 
 ## Shorter Case Studies
 
@@ -165,7 +167,7 @@ The website should have a few unforgettable animation moments instead of making 
 The main moments are:
 
 1. Designer and Developer hero transformation
-2. Hero-to-Work black transition
+2. Hero-to-Work cream torso transition
 3. Interactive Work project network
 4. One strong cinematic case study
 
