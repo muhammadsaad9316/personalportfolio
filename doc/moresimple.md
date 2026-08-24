@@ -73,12 +73,9 @@ When the visitor finishes the Work section and continues scrolling:
 2. The connecting lines dissolve.
 3. The centre impact circle becomes smaller.
 4. The heading **Digital products. Real impact.** moves upward and fades.
-5. The section title appears:
-   **CASE STUDIES**  
-   **A closer look at the thinking behind the work.**
-6. The same Salam Cargo preview smoothly moves from its Work position and expands into a full-width, full-height visual covering the left side of the first case study.
-7. The Salam Cargo title and case-study information appear on the right after the visual settles. The preview must feel like one continuous element, with no visible replacement or cut.
-8. When the visitor scrolls backward, the transition reverses smoothly and the Salam Cargo visual returns to its exact position in the Work section.
+5. The same Salam Cargo preview smoothly moves from its Work position and expands into a full-width, full-height visual covering the left side of the first case study.
+6. **Salam Cargo ERP** appears on the right when the visual settles, with one line of context and three short facts under it. The preview must feel like one continuous element, with no visible replacement or cut.
+7. When the visitor scrolls backward from that landing point, the transition reverses smoothly and the Salam Cargo visual returns to its exact position in the Work section.
 
 ## Shorter Case Studies
 
@@ -88,15 +85,15 @@ The Case Studies section should explain:
 
 The first and strongest project can have a more cinematic presentation.
 
-Its main image stays visible while the visitor scrolls through a short story:
+Its main visual stays full-height while the visitor scrolls through a short story:
 
-1. Project introduction
-2. The problem
-3. The approach
-4. The solution
-5. The result
+1. **Salam Cargo ERP** as a title card over the branch overview screenshot — the name, one line of context, and three facts
+2. **The problem** — five branches and disconnected records, with the company overview
+3. **The approach** — one shared operating language, with the bilties workspace
+4. **The solution** — connected branch and warehouse handoffs, with arrival management
+5. **The result** — one clear operational picture, with expense visibility
 
-The image can zoom or move slightly as each part appears.
+The supplied product screenshots fold: the current one lifts up out of the frame while the next rises into its place from below, and the copy leaves with the screenshot it belongs to. They do not crossfade — one panel replaces another. Each chapter advances on one scroll gesture, never by scroll distance, so a hard flick and a gentle nudge both move exactly one chapter. Touch and reduced-motion modes show the same content as an ordinary stacked case study with no prolonged pinning.
 
 This case study should feel impressive, but it should not require too much scrolling.
 

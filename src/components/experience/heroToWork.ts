@@ -10,7 +10,9 @@ import {
   UP_KEYS,
   claimHandoff,
   handoffBusy,
+  keyStep,
   releaseHandoff,
+  wheelStep,
 } from "./handoff";
 
 /**
@@ -372,15 +374,20 @@ export function useHeroToWork({
                through the whole flight, so without this an upward flick
                mid-move would also satisfy `atWorkTop()` and drag the Hero
                back underneath it. */
+            /* Ask the gate first, always — before any bail. It has to see the
+               events that arrive mid-move, because those are exactly the ones
+               that must not be allowed to queue up a second step. */
+            const step = wheelStep(event);
             if (handoffBusy(ID)) return;
             if (phase === "playing") {
               event.preventDefault();
               return;
             }
-            if (phase === "hero" && event.deltaY > 0) {
+            if (step === 0) return;
+            if (phase === "hero" && step > 0) {
               event.preventDefault();
               forward();
-            } else if (phase === "work" && event.deltaY < 0 && atWorkTop()) {
+            } else if (phase === "work" && step < 0 && atWorkTop()) {
               event.preventDefault();
               back();
             }
@@ -388,15 +395,12 @@ export function useHeroToWork({
 
           const onKey = (event: KeyboardEvent) => {
             if (event.metaKey || event.ctrlKey || event.altKey) return;
-            if (handoffBusy(ID)) return;
-            if (phase === "hero" && DOWN_KEYS.has(event.key)) {
+            const step = keyStep(event);
+            if (handoffBusy(ID) || step === 0) return;
+            if (phase === "hero" && step > 0) {
               event.preventDefault();
               forward();
-            } else if (
-              phase === "work" &&
-              UP_KEYS.has(event.key) &&
-              atWorkTop()
-            ) {
+            } else if (phase === "work" && step < 0 && atWorkTop()) {
               event.preventDefault();
               back();
             }

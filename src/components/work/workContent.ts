@@ -46,11 +46,20 @@ export const PROJECTS: Project[] = [
     preview: "dashboard",
     flagship: true,
     image: {
-      src: "/media/work/salam-cargo.webp",
-      width: 1500,
-      height: 958,
-      // Sized for the full-height cover state it reaches in Case Studies.
-      sizes: "(max-width: 899px) 92vw, 100vw",
+      /* The same file the first case-study chapter uses, and it has to be:
+         the element that flies is this card's own <img>, so a different file
+         here would make the landing a visible swap instead of one continuous
+         object. */
+      src: "/media/screenshotofSalamCargoo/01-branch-overview.png",
+      width: 2800,
+      height: 2640,
+      /* Sized for the full-bleed state it reaches in Case Studies, not for the
+         354px card it starts in — a transform never makes the browser fetch a
+         larger source. There the box is 58vw wide and a full viewport tall, so
+         a 2800 x 2640 image covering it is painted about `100vh * 2800/2640`
+         wide. Stating it in `vh` stays correct as the viewport changes shape;
+         140 also covers wide, short screens where the 58vw column wins. */
+      sizes: "(max-width: 899px) 92vw, 140vh",
     },
   },
   {

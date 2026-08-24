@@ -309,6 +309,12 @@
   display: block;
   margin-top: clamp(10px, 1.4vh, 18px);
   overflow: hidden;
+  /* Every card gets the same preview box as the inline-SVG artwork draws in,
+     so a real screenshot can never set the card's height. The flagship's file
+     is a near-square export chosen for the full-bleed case-study slot, and
+     letting it size this frame made its card half again as tall as the other
+     three. The image is cropped into this box instead. */
+  aspect-ratio: 360 / 230;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--card);
@@ -321,20 +327,35 @@
 .previewArt {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+}
+
+/* Crop rather than squash. On the cinematic path `work-to-cases` takes this
+   over — it scales the image to cover the frame at every point of the flight,
+   so it switches this to `fill` and does the covering itself. */
+.previewImage {
+  object-fit: cover;
+  object-position: left top;
 }
 
 /* The one frame that leaves the card. Promoted only where it actually
    travels. */
 @media (min-width: 900px) and (hover: hover) and (pointer: fine) and
   (prefers-reduced-motion: no-preference) {
+  /* No `will-change: transform` here on purpose. It promotes the frame to a
+     composited layer permanently, and Chrome then rasterises that layer once
+     at the card's own size and stretches the texture for the rest of the
+     page's life. This frame is scaled 2.3x horizontally and 4.5x vertically
+     into the case study, so a locked raster is the difference between a sharp
+     screenshot and a blurred one. `work-to-cases` sets it for the duration of
+     the move and clears it on arrival, so the landed frame re-rasterises at
+     its real size. */
   .flagship .projectFrame {
     border: 0;
     box-shadow:
       inset 0 0 0 1px var(--line),
       0 1px 2px rgba(20, 18, 14, 0.04),
       0 18px 40px -26px rgba(20, 18, 14, 0.3);
-    will-change: transform;
   }
 }
 

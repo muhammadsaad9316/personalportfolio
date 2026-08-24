@@ -1,51 +1,109 @@
+/** Content for the flagship Salam Cargo case-study chapters. */
+
+export type CaseImage = {
+  src: string;
+  width: number;
+  height: number;
+  alt: string;
+  position: string;
+};
+
+export type CaseChapter = {
+  id: "intro" | "problem" | "approach" | "solution" | "result";
+  label?: string;
+  title: string;
+  body?: string;
+  proof?: string[];
+  image: CaseImage;
+};
+
 /**
- * Case Studies content.
+ * The supplied set in `public/media/screenshotofSalamCargoo/`.
  *
- * Only the flagship study lives here for now. It is the study the
- * `work-to-cases` transition lands on, so its visual has to be the exact same
- * file the Work card uses — the transition moves one element between the two
- * layouts rather than swapping one image for another.
- *
- * Copy comes from `doc/simpleenglish.md`. The remaining three studies are a
- * separate, shorter pattern (see doc/MOTION_ARCHITECTURE.md) and are not built
- * yet.
+ * 2800 x 2640 — near square, and deliberately so. The desktop study crops
+ * these into a slot that is 58vw wide and a full viewport tall (about 0.92:1),
+ * so a near-square source only has to give up around a tenth of its width,
+ * where the original 16:9 exports had to be magnified to nearly twice the
+ * column width before they filled it. These numbers must match the files on
+ * disk: `next/image` reserves layout from them, so a wrong pair either shifts
+ * the page after load or reserves the wrong shape for the stacked mobile
+ * figures.
  */
+const screenshot = (
+  file: string,
+  alt: string,
+  position = "center center",
+): CaseImage => ({
+  src: `/media/screenshotofSalamCargoo/${file}`,
+  width: 2800,
+  height: 2640,
+  alt,
+  position,
+});
 
-export const CASES_INTRO = {
-  num: "03",
-  label: "Case Studies",
-  /** Split so the middle word can take the serif accent, as in Work. */
-  headingLead: "A closer look at the",
-  headingAccent: "thinking",
-  headingTail: "behind the work.",
-};
-
-export type CaseStudy = {
-  id: string;
-  num: string;
-  name: string;
-  kind: string;
-  intro: string;
-  href: string;
-  image: { src: string; width: number; height: number; sizes: string };
-  imageAlt: string;
-};
-
-export const FLAGSHIP: CaseStudy = {
-  id: "salam-cargo",
-  num: "01",
-  name: "Salam Cargo ERP",
-  kind: "Cargo Management System",
-  intro:
-    "A system created to manage cargo operations across multiple branches.",
-  href: "/work/salam-cargo-erp",
-  image: {
-    src: "/media/work/salam-cargo.webp",
-    width: 1500,
-    height: 958,
-    // The desktop study crops this into a full-height, full-bleed left side.
-    sizes: "(max-width: 899px) 92vw, 100vw",
+export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
+  {
+    id: "intro",
+    /* `doc/moresimple.md` originally called for the name alone here. On screen
+       that left most of the right-hand column empty against a full-bleed
+       visual, so Saad asked for it to carry its own weight. Kept to one line
+       of context and three facts — enough to anchor the panel, not so much
+       that it stops being a title card. */
+    label: "Case study",
+    title: "Salam Cargo ERP",
+    body: "One connected system for a five-branch cargo operation — bookings, payments, dispatch and warehouse handoffs held in a single traceable flow.",
+    proof: ["Management system", "Five branches", "Booking to delivery"],
+    image: screenshot(
+      "01-branch-overview.png",
+      "Salam Cargo ERP branch overview showing collections, bookings, cargo weight, balances, and recent activity.",
+      "left center",
+    ),
   },
-  imageAlt:
-    "The Salam Cargo ERP company overview: weekly bookings, collections and profit, warehouse queue counts, and a branch comparison table.",
-};
+  {
+    id: "problem",
+    label: "The problem",
+    title: "Five branches. Five versions of the truth.",
+    body: "Bookings, payments, cargo status, and expenses lived in separate branch workflows. Getting one reliable company picture meant chasing updates and reconciling records by hand.",
+    proof: ["05 operating branches", "Disconnected records"],
+    image: screenshot(
+      "04-company-overview.png",
+      "Company overview comparing bookings, revenue, expenses, profit, and outstanding balances across five branches.",
+    ),
+  },
+  {
+    id: "approach",
+    label: "The approach",
+    title: "Design the operation before the interface.",
+    body: "I mapped the cargo journey from booking to delivery, then created one shared status model so every branch could work the same way without losing local responsibility.",
+    proof: ["Shared status language", "Role-aware workflows"],
+    image: screenshot(
+      "02-bilties.png",
+      "Bilties workspace with searchable cargo bookings, payment states, branch filters, and dispatch statuses.",
+      "42% center",
+    ),
+  },
+  {
+    id: "solution",
+    label: "The solution",
+    title: "Every booking. Every handoff. One system.",
+    body: "A role-aware ERP now connects branch bookings, packing, dispatch, warehouse arrivals, payments, and operating expenses in one traceable flow.",
+    proof: ["Branch → warehouse", "Booking → payment"],
+    image: screenshot(
+      "05-arrival-management.png",
+      "Arrival management workspace tracking dispatched trucks, pending cargo, and completed warehouse receipts.",
+      "40% center",
+    ),
+  },
+  {
+    id: "result",
+    label: "The result",
+    title: "One clear picture of the whole business.",
+    body: "Teams can trace daily work without switching systems, while leadership can see branch performance, cash movement, and operational risk without stitching reports together.",
+    proof: ["527 weekly bookings", "One source of truth"],
+    image: screenshot(
+      "03-expenses.png",
+      "Expenses workspace summarizing branch spending, categories, transactions, and the people responsible.",
+      "42% center",
+    ),
+  },
+];

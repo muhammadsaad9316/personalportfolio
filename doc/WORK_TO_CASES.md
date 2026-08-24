@@ -22,12 +22,10 @@ or left stalled half way.
 2. The connecting lines dissolve.
 3. The centre impact circle shrinks.
 4. **Digital products. Real impact.** lifts upward and fades.
-5. **CASE STUDIES / A closer look at the thinking behind the work.** arrives on
-   the right.
-6. The Salam Cargo preview travels out of its Work card and grows into the
+5. The Salam Cargo preview travels out of its Work card and grows into the
    full-width, full-height visual on the left of the first case study.
-7. **Salam Cargo ERP** and its case-study copy rise in on the right, after the
-   visual has settled.
+6. **Salam Cargo ERP** rises in on the right after the visual settles, with one
+   line of context and three facts.
 
 One upward gesture reverses the identical timeline and returns the preview to
 its exact position in the Work card. A second upward gesture at Work hands
@@ -52,12 +50,11 @@ two pictures dissolving into each other.
 | --- | --- |
 | `src/components/experience/Experience.tsx` | The shared wrapper. Holds Hero, Work and Case Studies, and calls one hook per transition. Owns no motion itself. |
 | `src/components/experience/workToCases.ts` | The `work-to-cases` timeline and its gesture handling. |
-| `src/components/experience/handoff.ts` | The one flag `hero-to-work` and `work-to-cases` share, plus the key sets both read. |
+| `src/components/experience/handoff.ts` | The gesture gate every beat shares: it collapses a flick into one step, enforces a settle window, and holds the one-owner lock. Animates nothing. |
 | `src/components/cases/CaseStudies.tsx` | Case Studies structure and content. |
 | `src/components/cases/Cases.module.css` | Case Studies layout and static styling. |
 | `src/components/cases/casesContent.ts` | Case Studies copy and image data. |
-| `public/media/work/salam-cargo.webp` | The shipped visual. 1500 × 958, 68 KB. |
-| `media/salam-cargo-dashboard.png` | The untouched source screenshot. |
+| `public/media/screenshotofSalamCargoo/*.png` | Five supplied 2800 × 2640 product screenshots used by the shared preview and featured chapters. Near-square on purpose — see §8. |
 
 ### Renamed
 
@@ -107,7 +104,7 @@ leaving the document.
 }
 
 @media (cinematic) {
-  .stage        { height: 200svh; }
+  .stage        { height: 600svh; }
   .stageSticky  { position: sticky; top: 0; height: 100svh;
                   overflow: hidden; display: grid;
                   grid-template-columns: 100%; grid-template-rows: 100%; }
@@ -126,28 +123,29 @@ Verified in the browser: `position: sticky`, height 900 at a 900px viewport.
 
 ### Scroll map
 
-The stage is **two rest positions, not a scrub track**. Nothing is scroll
-linked, so the range between them carries no animation at all — it exists only
-to give the landed study a scroll position of its own, so the page can carry on
-below it later. Every position inside that range renders the same stuck frame,
-which is what makes the jump at the end of the move invisible.
+The stage is **seven rest positions, not a scrub track**. Work rests at the
+stage top, the case landing one viewport later, and each remaining chapter one
+viewport after that. Nothing on this stage is scroll-linked.
 
 At a 1440 × 900 viewport:
 
-| Range | scrollY | State |
+| Beat | scrollY | State |
 | --- | --- | --- |
 | Hero | 0 | Held until a gesture; `hero-to-work` jumps to the stage top |
-| Work at rest | 900 | Held until a gesture; timeline at progress 0 |
-| The move | 900 | Plays in place. The scroll does not move until it lands |
-| Study at rest | 1800 | Jumped to on completion; timeline at progress 1 |
-| Document end | 1800 (max scroll) | Sticky releases exactly at the page bottom — no dead space |
+| Work | 900 | Held until a gesture; timeline at progress 0 |
+| *(any move)* | unchanged | Plays in place. The scroll only jumps once the move has landed |
+| Case intro | 1800 | **Salam Cargo ERP**, its line of context and three facts |
+| The problem | 2700 | |
+| The approach | 3600 | |
+| The solution | 4500 | |
+| The result | 5400 (max scroll) | Sticky releases exactly here — no dead space |
 
-`200svh` = 100 (Work) + 100 (the study's own rest position). The second figure
-is one viewport by construction: `casesTop` is computed as
-`stage.offsetTop + stage.offsetHeight - sticky.offsetHeight`, the last position
-the sticky is stuck at, so the two never drift apart the way the old
-`CASES_SCROLL` constant and this height could. Changing this height moves where
-the study rests; it does **not** change the move's pace, which is `FORWARD_TIME`.
+`600svh` = six beats of one viewport each. Nothing scrubs across that range —
+every beat is stepped by gesture — so it exists only to give each beat a scroll
+position of its own, which keeps the scrollbar honest and lets a reload land
+back on the right chapter. `casesTop` is `stage.offsetTop + sticky.offsetHeight`
+and chapter *i* rests at `casesTop + i * sticky.offsetHeight`, so the last
+chapter falls exactly on max scroll.
 
 ### Stacking
 
@@ -197,13 +195,39 @@ The same trick wraps the Work heading (`.introOut`) and each network SVG
 | `[data-cases-out="wires"]` | connector SVG layer | `autoAlpha` |
 | `[data-cases-out="centre"]` | impact circle SVG layer | `autoAlpha`, `scale` |
 | `[data-flight-frame]` | flagship `.projectFrame` | `x`, `y`, `scaleX`, `scaleY`, border radius, shadow |
-| `[data-flight-frame] img` | the shared Salam Cargo image | counter `scaleX`, `scaleY` to preserve its ratio |
-| `[data-cases-in="title"]` | section eyebrow + h2 | `autoAlpha`, `y` |
-| `[data-cases-in="study"]` | study num, name, kind, intro | `autoAlpha`, `y` |
-| `[data-case-slot]` | landing target | nothing — measured only |
+| `[data-flight-media]` | the shared Salam Cargo image | `scaleX`, `scaleY` to cover the frame's live box at its own ratio, plus `object-fit`; `case-featured` later owns opacity only |
+| `[data-cases-in="study"]` | the landing title's inner wrapper | `autoAlpha`, `y` |
+| `[data-cases]` | the whole case panel | `autoAlpha` — hidden until the move is nearly over |
+| `[data-case-slot]` | the full-bleed visual container | `autoAlpha` — measured, and hidden until the frame covers it |
 
 The flagship keeps its `.projectOut` untouched, because fading that layer would
 take the picture with it. Only its text leaves.
+
+### Why the panel has to be hidden, not just empty
+
+The case panel shares Work's grid cell and `.work` is transparent, so anything
+painted in the panel shows straight through the Work section. `case-featured`
+arms its first chapter *visible*, which is right once the study has landed and
+wrong while Work is on screen — it put the 826 × 900 flagship screenshot behind
+the project network, over the Work heading.
+
+`case-featured` owns `[data-case-visual]` and `[data-case-chapter]`, so this
+handoff must not touch them. It owns the two containers instead — the panel and
+the visual slot — which is the wrapper-layer rule in
+`doc/MOTION_ARCHITECTURE.md` applied to a section rather than a card.
+
+The two reveals are timed apart on purpose:
+
+| At | Target | Why there |
+| --- | --- | --- |
+| 0.78 | `[data-cases]` | Just before the copy at 0.80. The panel's ground is the same `--work-cream` the stage is painted in, so nothing changes on screen |
+| 0.82 | `[data-case-slot]` | The exact frame the flight lands, when the travelling frame covers the slot with its 2px overscan and carries the identical image. Any earlier and the full-size screenshot shows around the still-arriving frame |
+
+Both are zero-duration `set`s inside the timeline, so the reverse restores them
+and the panel is hidden again the moment Work is back.
+
+`autoAlpha` and not `display`: the slot must keep its layout box, because the
+flight measures it.
 
 ---
 
@@ -211,9 +235,9 @@ take the picture with it. Only its text leaves.
 
 ### Geometry
 
-The destination is a different aspect ratio from the Work card. The outer
-frame therefore maps to the slot on both axes, while the image inside receives
-the inverse counter-scale needed to stay undistorted and crop like `cover`:
+The destination is a different aspect ratio from the Work card, and so is the
+image. The outer frame maps to the slot on both axes, while the image inside is
+scaled to cover the frame's **current** box using its own ratio:
 
 ```
 scaleX = (slot.width + 4px overscan) / frame.layoutWidth
@@ -221,10 +245,40 @@ scaleY = (slot.height + 4px overscan) / frame.layoutHeight
 x      = slot.offset.x - frame.offset.x - 2px
 y      = slot.offset.y - frame.offset.y - 2px
 
-cover       = max(scaleX, scaleY)
-mediaScaleX = cover / scaleX
-mediaScaleY = cover / scaleY
+-- every frame, from the live box rather than two stored endpoints --
+boxW        = frame.offsetWidth  * currentScaleX
+boxH        = frame.offsetHeight * currentScaleY
+coverW      = max(boxW, boxH * imageRatio)
+mediaScaleX = coverW / boxW
+mediaScaleY = coverW / imageRatio / boxH
 ```
+
+`imageRatio` comes from `naturalWidth / naturalHeight`, falling back to the
+declared attributes until the file decodes, with a `load` listener that
+re-measures. Note that `naturalWidth` is density-corrected for a
+srcset-selected source — a 2560px file can report 1260 — but that scales both
+axes equally, so the *ratio* is still true.
+
+### Why not `max(scaleX, scaleY)`
+
+The earlier form was `cover = max(scaleX, scaleY)`, then `cover / scaleX` and
+`cover / scaleY`. That is only equivalent while **the Work card frame happens
+to share the image's aspect ratio**, which it did for as long as
+`.previewImage` was `height: auto`.
+
+That invariant is gone. The card is now pinned to the inline-SVG preview box
+(`aspect-ratio: 360 / 230`) so a real screenshot cannot set the card's height,
+while the supplied screenshots are near-square (2800 × 2640) because that is
+what suits the full-bleed slot. With a 354 × 226 card frame the old form lands
+the image at **1416 × 904** where the chapter slide underneath paints it at
+955 × 900 — a 48% jump on the crossfade. The live-box form lands it at
+959.6 × 904, which is the slide's framing plus the 2px overscan on each side.
+
+Because the image is covered by transform rather than by `object-fit`, GSAP
+sets `object-fit: fill` on the cinematic path — `cover` would crop a second
+time, inside a box that is the wrong shape for most of the flight. The CSS
+keeps `object-fit: cover` as the base, which is what the static path and the
+pre-hydration frame use.
 
 The 2px overlap on each edge prevents sub-pixel seams. On the desktop cinematic
 path, the flagship's Work border is drawn as an inset shadow rather than a
@@ -288,7 +342,7 @@ One **paused** timeline, played forward and reversed. Not two builds: the
 return has to retrace this exact path for the frame to land back in its card to
 the pixel, which a separately authored reverse cannot guarantee.
 
-Timeline units stay abstract and total 1.115. `timeScale` maps them onto real
+Timeline units stay abstract and total 0.98. `timeScale` maps them onto real
 seconds — `FORWARD_TIME = 1.9`, `BACK_TIME = 1.5` — so re-timing one beat never
 changes the overall pace, and changing the pace never disturbs the
 choreography. 1.9s is `hero-to-work`'s length, so the two handoffs read as the
@@ -304,39 +358,38 @@ different. The "% of scroll" column is now "% of the move".
 | 2 Lines dissolve | `wires` | 0.10 | 0.32 | 9–29% | `autoAlpha 0` |
 | 4 Heading lifts | `intro` | 0.14 | 0.40 | 13–36% | `autoAlpha 0`, `y -44` |
 | 3 Circle shrinks | `centre` | 0.16 | 0.42 | 14–38% | `autoAlpha 0`, `scale .72` |
-| 5 Section title in | `title` ×2 | 0.38 | 0.68 | 34–61% | `autoAlpha 1`, `y 0`, stagger .06 |
-| 6 **The flight** | `frame` | 0.42 | 0.82 | 38–74% | `power1.inOut` |
-| 7 Study copy in | `study` ×4 | 0.80 | 1.115 | 72–100% | `autoAlpha 1`, `y 0`, stagger .045 |
+| 5 **The flight** | `frame` | 0.42 | 0.82 | 43–84% | two-axis cover mapping, `power1.inOut` |
+| 6 Project title in | `study` ×1 | 0.80 | 0.98 | 82–100% | `autoAlpha 1`, `y 0` |
 
 Default ease `power2.inOut`; the flight uses `power1.inOut` so a long diagonal
 travel does not read as mechanical.
 
-The documented order is respected — the section title (5) starts before the
-flight (6) — but beats deliberately overlap. Strictly sequential beats would
-make the move twice as long and read as a checklist.
+The beats deliberately overlap. Strictly sequential beats would make the move
+twice as long and read as a checklist.
 
 ### Gesture handling
 
 The state machine is three values — `work`, `playing`, `cases` — and the same
 `hold()` / `jumpTo()` pair `heroToWork.ts` uses. A downward wheel or
-`DOWN_KEYS` at `work` plays forward; an upward wheel or `UP_KEYS` at `cases`
-reverses. `hold()` stops Lenis and swallows wheel, touchmove and keydown for
-the duration, and the scroll is parked on the landing rest position in
-`onComplete` / `onReverseComplete`.
+`DOWN_KEYS` at `work` plays forward. An upward wheel or `UP_KEYS` reverses only
+after the visitor returns to `casesTop`; deeper in the story it remains normal
+reverse chapter scrolling. `hold()` stops Lenis and swallows wheel, touchmove,
+and keydown for the handoff itself.
 
-Two guards matter:
+Three guards matter:
 
 - **`onStage()`** — `scrollY >= workTop() - 4`. Without it, the downward flick
   that launches the Hero's dolly would launch this move as well.
+- **`atCasesTop()`** — prevents an upward gesture inside the featured chapters
+  from reversing the outer Work handoff early.
 - **`handoffBusy(ID)`** — `hero-to-work` keeps the scroll at `workTop` while it
   plays, and this move keeps it there for its whole flight, so `atWorkTop()` is
   true during both. Either handoff would otherwise fire inside the other's
   move. See `handoff.ts`.
 
-Because `hero-to-work` restarts Lenis when it lands, and this stage has no
-free-scrolling region of its own, `onWheel` and `onKey` call `getLenis()?.stop()`
-before deciding. The one notch Lenis has already consumed cannot show anything:
-every scroll position on the stage renders the same stuck frame.
+Work remains a held rest position. When the frame lands at `casesTop`,
+`rest(true)` resumes Lenis so `case-featured` can scrub the remaining range.
+Returning to Work uses `rest(false)` and holds again.
 
 ### Pointer handling
 
@@ -365,41 +418,115 @@ Everything above.
 - `.stage` is `height: auto`, `.stageSticky` is a plain block. Work and Case
   Studies are two ordinary stacked sections in document order.
 - Nothing travels. The frame keeps no transform.
-- The slot renders its **own** copy of the image — CSS decides, not JS.
-- Reduced motion: the branch returns immediately, so every element sits at its
-  natural CSS state. No scrub, no pin, no parallax.
-- Touch and narrow windows (not reduced motion): one short `cases-intro`
-  reveal, `start: "top 72%"`, `once: true`.
+- Every chapter renders in document flow with its own supplied screenshot.
+- Reduced motion: every chapter is immediately readable. No scrub, pin, or
+  parallax.
+- Touch and narrow windows keep native scrolling and the same complete story.
 
-### The slot image in cinematic mode
+### The visual layers in cinematic mode
 
-The slot's `<img>` is not `display: none` on the cinematic path — it is
-`opacity: 0`. That keeps its descriptive `alt` in the accessibility tree while
-the travelling frame supplies the visible picture. The Work card's copy carries
-`alt=""`, because the card's own text already names it.
-
-The slot's border, background and shadow are also cleared on the cinematic
-path, so the empty landing target is invisible; the frame brings its own.
+The case-study gallery sits inside the measured slot underneath the travelling
+Work frame. Its first image matches the shared frame exactly. Once chapter
+scrolling begins, `case-featured` fades the shared image while the frame's
+background is already transparent, exposing the gallery with no replacement
+flash.
 
 ---
 
-## 8. The image
+## 8. The screenshots
 
-Source: a full-page screenshot of the Salam Cargo ERP company overview,
-1920 × 1933.
+The supplied `public/media/screenshotofSalamCargoo/` set contains five
+5760 × 3240 PNGs: branch overview, company overview, bilties, expenses, and
+arrival management. Next Image delivers responsive derivatives.
 
-Cropped to the top 1920 × 1226 band and resized to **1500 × 958**, WebP q82,
-**68 KB**. The crop keeps the header, the five-KPI row, the warehouse queue
-counts and the whole branch comparison table — the part that still reads as a
-real product at 354px card width — and drops the sparse lower charts.
+### Why the landed visual looked soft, and the two separate causes
 
-`sizes` is `(max-width: 899px) 92vw, 52vw`, chosen for the **landed** size, not
-the card size. The card shows it at ~354px, but the same element is scaled to
-~723px by the transition, and a transform does not make the browser fetch a
-larger source.
+Worth writing down, because the two look identical on screen and only one of
+them is about pixels.
 
-One file serves both places. `workContent.ts` and `casesContent.ts` both point
-at `/media/work/salam-cargo.webp`.
+**1. `sizes` described the column, not the image.** The slot is 58vw wide and a
+full viewport tall. A 16:9 screenshot set to `object-fit: cover` in a box that
+tall is painted `100vh * 16/9` = **178vh** wide — at 1440 × 900 that is 1600
+CSS px, nearly twice the 826px column it sits in. `sizes` said `60vw` (864px),
+so the browser fetched a 1920px derivative for something needing 2400 device px
+at the 1.5x scaling most Windows laptops run, and upscaled the difference.
+
+Both the slot images and the shared Work image now say
+`(max-width: 899px) 92vw, 180vh`. Stating it in `vh` is not a trick — the
+rendered width genuinely depends on viewport *height*, so a `vw` figure is only
+ever right at one aspect ratio. `next.config.ts` also gained a **2560**
+`deviceSizes` step, because without it the choice at 1.5x is 2048 (still soft)
+or 3840 (twice the bytes needed), and quality went to 88: at 75 the small type
+in a dense UI screenshot visibly mushes.
+
+Beware `naturalWidth` when checking this. For a srcset-selected image it is
+density-corrected, so a 3840px file reports `naturalWidth: 1440`. It looks like
+the optimiser is ignoring you. Read the `w=` in `currentSrc` instead.
+
+**2. A locked raster scale.** `.flagship .projectFrame` carried
+`will-change: transform` permanently. That promotes it to a composited layer
+which Chrome rasterises once at the card's own 354px and then stretches — and
+this frame grows 2.3x horizontally and 4.5x vertically, so the landed
+screenshot was a blown-up texture no matter how many source pixels were
+fetched. The CSS rule is gone; `work-to-cases` now sets `will-change` on the
+frame and its media when a move starts and clears it in `onComplete` /
+`onReverseComplete`, so the landed frame re-rasterises at its real size.
+
+If softness ever returns, the next suspect is `.projectMotion`, an ancestor of
+the frame, which still holds a permanent `will-change: transform, opacity`.
+
+The Work card and landing both start with `01-branch-overview.png`, preserving
+the shared-object handoff. After landing, `case-featured` fades that shared
+image's opacity only and crossfades the matching gallery underneath. The outer
+frame remains owned by `work-to-cases`.
+
+### Featured chapter timeline
+
+`CaseStudies.tsx` owns one labelled timeline with one ScrollTrigger:
+
+- `start = stage.offsetTop + sticky.offsetHeight` (`casesTop`)
+- `end = stage.offsetTop + stage.offsetHeight - sticky.offsetHeight`
+- `scrub: 0.7`; no second pin because `.stageSticky` already supplies it
+- labels: `intro`, `problem`, `approach`, `solution`, `result`
+
+The screenshots **fold**; they do not crossfade. The outgoing panel translates
+`yPercent: -100` up out of the slot while the incoming one rises from
+`yPercent: 100` below it, both on the same `power2.inOut` curve over the same
+0.82 units, so they read as one strip moving rather than two animations that
+happen to overlap. Both stay fully opaque — a dissolve reads as two pictures
+blending, and the point is that one panel replaces another. The only opacity in
+the move belongs to the copy, which starts leaving on the same frame as its own
+panel and is gone before the next panel settles, so text is never stranded over
+the wrong image.
+
+Constants live at the top of `CaseStudies.tsx`: `FOLD_EASE`, `FOLD_DUR`,
+`FOLD_LEAD`, `FOLD_SCALE`. The 1.05 lift on the panel leaving and the panel
+arriving is deliberately small; a `cover` image only crops further as it
+scales, but more than this reads as a zoom rather than a fold.
+
+Slide 0 must sit at exactly `yPercent: 0, scale: 1`, because the travelling
+Work frame lands on top of it and hands over. The pre-hydration guard in
+`Cases.module.css` parks the other slides at `translateY(100%)` rather than
+`opacity: 0`, so nothing flashes over the first panel before GSAP arms them.
+
+### The slides must load eagerly
+
+Parking them below the frame has a consequence that is easy to miss: **lazy
+loading measures the transformed box.** A slide sitting at `translateY(100%)`
+is genuinely off-screen, so Chrome never starts the fetch — stepping to a
+chapter then showed a completely empty panel, because the image only began
+downloading as it slid in.
+
+The crossfade this replaced never hit it: every slide stayed at `inset: 0` and
+only opacity changed, so they all counted as in-view and loaded on their own.
+
+So slides 1–4 carry `loading="eager"`. Only slide 0 is `priority` — the rest
+load with the page but without a preload hint, so they never compete with the
+one that is actually on screen.
+
+The chapter articles remain in accessible document order. Their inactive
+desktop states use opacity rather than visibility, while touch and reduced
+motion render all five as ordinary stacked articles.
 
 ---
 
@@ -410,17 +537,27 @@ Measured in Playwright at 1440 × 900 unless noted.
 | Check | Result |
 | --- | --- |
 | One gesture forward | a single wheel notch at Work plays the whole move; `scrollY` stays 900 for the entire flight and lands at 1800 |
+| Slides parked exactly one frame down | `ty` is 0, 900, 900, 900, 900 at a 900px frame — pure `yPercent` with no cached offset, so `yPercent: 0` lands the incoming panel at `ty: 0`, in frame |
+| No CSS transform on anything GSAP transforms | all four Hero `[data-exit]` targets report `cssTransform: "none"`, and `.copy` keeps its centring on its own box (rect unchanged at `46, 209, 340 × 455`) |
+| Every chapter image ready before it is needed | all five slot images report `complete: true` with a decoded source on load, and the network shows one `w=1920&q=88` fetch per screenshot |
+| One gesture, one beat | the real `handoff.ts` compiled and driven through recorded input patterns: a 2.5s hard trackpad flick (250 events) → **1 step**; a 0.3s gentle flick (25 events) → **1 step**; three deliberate flicks 3s apart → **3 steps**; four single notches 3s apart → **4 steps**; a steady wheel roll for 10s → **5 steps**; an accidental double-tick 100ms apart → **1 step** |
+| Seven rest positions | at 1440 × 900: 0, 900, 1800, 2700, 3600, 4500, 5400, with 5400 exactly equal to max scroll |
+| Card previews all one height | all four `.projectFrame` boxes measure 354 × 226 at 1440 (335 × 214 at 375), so the near-square flagship screenshot no longer makes its card taller than the other three |
+| Landing after the card was un-pinned from the image ratio | with a 354 × 226 frame, the live-box cover form puts the media at 959.6 × 904 against the slide's 955.35 × 900 — a 0.25 × 0 difference once the 2px overscan per side is removed |
+| Touch path unaffected by the cover rewrite | at 375: `object-fit: cover`, `transform: none`, no counter-scale — GSAP's `fill` is scoped to the cinematic branch |
+| Panel kept out of Work | at Hero, at Work and mid-flight, `[data-cases]` and `[data-case-slot]` are `hidden / 0` and the flagship screenshot inherits `hidden`; all three are `visible / 1` once landed, and `hidden / 0` again after the reverse. This was a real regression: the panel painted an 826 × 900 screenshot through the Work section |
 | Full-bleed landing | slot `(0, 0, 826.30×900)`; frame `(-2.10, -2.91, 830.31×904)` — every edge covered, with no seam |
 | Reverse | one upward notch returns the frame to `matrix(1, 0, 0, 1, 0, 0)` — its exact card position |
 | Reverse state | Work heading, cards, wires and circle all back to `visible / 1`; case copy back to `hidden / 0`; `[data-network]` `pointer-events: auto` |
-| Cross-handoff guard | two upward flicks fired mid-reverse: hero stayed `hidden / 0`, `scrollY` stayed 1800, the lock stayed with `work-to-cases` |
-| Keyboard | PageDown plays forward, PageUp reverses, both landing on the same rest positions as the wheel |
-| Full round trip | hero → work → cases → work → hero → work → cases → work; every rest state returns the lock to `null` |
+| Featured chapters | intro at 1800; problem at ~2580; approach at 3280; solution at 3980; result at the 4680 page end |
+| Chapter reverse | one upward scroll from 4680 returns every chapter to intro at 1800; the next notch reverses the outer frame to Work |
+| Keyboard | PageDown lands Work at 900, the case intro at 1800, then advances into the scrubbed story instead of replaying a handoff |
 | Resize while landed | at 1180 × 800 the slot is `(0, 0, 675.5×800)` and the frame covers it at `(-1.73, -2.47)` through `(677.75, 801.12)` |
-| Page end | `casesTop` = max scroll at both 1440 × 900 (1800) and 1180 × 860 (1720) — no gap after the study |
-| Mobile 375 × 812 | stacked, sticky `relative`, stage height auto, frame `transform: none`, slot image `opacity 1`, `cases-intro` reveal fires |
-| Reduced motion | CSS gate read from the CSSOM: `.stage { height: 200svh }` applies **only** under `(prefers-reduced-motion: no-preference)`, so the stage stays `auto` as before. The JS branch is unchanged from the scrubbed version and still returns early. Not re-run under live emulation — the browser harness has no reduced-motion toggle |
-| Production build | passes; `/` at 21.7 kB, 183 kB First Load JS |
+| Page end | 4680 at 1440 × 900; the sticky releases with the result chapter visible and no trailing gap |
+| Mobile 390 × 844 | stage/sticky are `relative`; all five chapters have `opacity 1`, their own visible image, and normal document flow |
+| Reduced motion | `.stage { height: 520svh }` and the overlapping chapter layout are both gated behind `prefers-reduced-motion: no-preference`; the reduced branch is static. Not re-run under live emulation because the browser harness has no reduced-motion toggle |
+| Browser console | no warnings or errors after a clean load and Hero → Work → case → problem interaction |
+| Production build | passes; `/` at 23 kB, 184 kB First Load JS |
 
 ### Two GSAP behaviours worth remembering
 
@@ -463,8 +600,9 @@ edge as still open.
 | --- | --- |
 | Slower / faster move | `FORWARD_TIME` in `workToCases.ts` (currently `1.9s`) |
 | Slower / faster return | `BACK_TIME` (currently `1.5s`) |
-| Where the landed study rests on the scroll | `.stage` height in `Experience.module.css`. Nothing else reads it — `casesTop` is derived from layout |
+| Longer / shorter featured story | `.stage` height in `Experience.module.css` (currently `520svh`); the landing seam remains one viewport after Work |
 | Reorder or re-time beats | the position parameters in the timeline table above |
+| Edit chapter copy or screenshot order | `casesContent.ts` |
 | Different flight path feel | the flight tween's `ease` (currently `power1.inOut`) |
 | Bigger / smaller landed visual | `.panel` grid columns in `Cases.module.css` — the flight measures whatever the slot ends up being |
 | A different flagship | `flagship: true` in `workContent.ts` plus a real `image` on that project |
@@ -473,13 +611,6 @@ edge as still open.
 
 ## 12. Not built yet
 
-- **`case-featured`** — the flagship's pinned chapter scroll
-  (intro → problem → approach → solution → result, ~300–400vh). It owns the
-  *inner* visual layer only; `work-to-cases` alone owns the outer frame's move
-  between section layouts. The study's rest position — `casesTop`, the far end
-  of the stage — is the seam it should start from. That is also where `rest()`
-  should stop holding the page still and start Lenis again, since the study
-  will no longer be the last thing on the page.
 - **Case studies 02–04** — Time Mardan, Danx Detailing, Miru Closet, as the
   short shared entrance pattern. Copy is in `doc/simpleenglish.md`.
 - **Case-study ending, contact, footer.**

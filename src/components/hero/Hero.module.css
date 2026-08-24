@@ -210,10 +210,20 @@
   position: absolute;
   left: 0;
   top: 44%;
-  /* Static centring transform on the wrapper; GSAP animates the .layer
-     inside it, so the two never touch the same element. */
+  /* Static centring transform. Nothing else may transform THIS element: GSAP
+     parses an existing transform into its own x/y cache, so a tween that ends
+     at `y: 0` would silently absorb and then discard the -50% and drop the
+     block half its own height. Three transforms, three elements, one owner
+     each — `.copyExit` below carries the Hero → Work exit and `.layer` carries
+     the pointer parallax. */
   transform: translateY(-50%);
   width: clamp(266px, 25.5%, 400px);
+}
+
+/* Motion layer for the Hero → Work exit only. No styles of its own: it exists
+   so `[data-exit="up"]` has a box GSAP can own outright. */
+.copyExit {
+  display: block;
 }
 
 .eyebrow {

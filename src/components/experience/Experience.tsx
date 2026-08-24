@@ -56,8 +56,12 @@ export default function Experience() {
         </div>
       </div>
 
-      <div ref={stageRef} className={styles.stage}>
-        <div ref={stickyRef} className={styles.stageSticky}>
+      <div ref={stageRef} className={styles.stage} data-experience-stage>
+        <div
+          ref={stickyRef}
+          className={styles.stageSticky}
+          data-experience-sticky
+        >
           <Work ref={work} />
           <CaseStudies />
         </div>

@@ -9,7 +9,9 @@ import {
   UP_KEYS,
   claimHandoff,
   handoffBusy,
+  keyStep,
   releaseHandoff,
+  wheelStep,
 } from "./handoff";
 
 /**
@@ -19,9 +21,9 @@ import {
  * out as a single grid cell so both compositions occupy the same space. One
  * timeline crossfades between them in the documented order: the three
  * secondary previews leave, the wires dissolve, the impact circle shrinks,
- * "Digital products. Real impact." lifts away, the Case Studies title arrives,
- * and the Salam Cargo preview travels from its Work position into the
- * full-bleed left-hand visual of the study.
+ * "Digital products. Real impact." lifts away, and the Salam Cargo preview
+ * travels from its Work position into the full-bleed left-hand visual while
+ * the single project title arrives on the right.
  *
  * Like `hero-to-work`, the move is driven by scroll INTENT rather than scroll
  * position: one gesture — a wheel notch, a trackpad flick, Page Down — plays
@@ -30,12 +32,9 @@ import {
  * or left stalled half way. That is the deliberate departure from the "one
  * ScrollTrigger" note in doc/MOTION_ARCHITECTURE.md that both handoffs share.
  *
- * The stage is therefore two rest positions rather than a scrub track: Work at
- * `stage.offsetTop`, the landed study one viewport further down, at the last
- * position the sticky is stuck at. Every scroll position between them looks
- * identical — the sticky covers the whole range — so the jump between them at
- * the end of the move is invisible, and a stray notch that slips through
- * before the hold takes cannot show anything either.
+ * The handoff still has two rest positions: Work at `stage.offsetTop` and the
+ * landed study one viewport later. From that seam onward, `case-featured`
+ * owns the remaining sticky range and scrubs the project chapters.
  *
  * The preview is not copied or swapped. The element that flies is the Work
  * card's own `.projectFrame`; the case study's left side is an empty,
@@ -102,7 +101,9 @@ export function useWorkToCases({
       if (!stage || !sticky) return;
 
       const frame = stage.querySelector<HTMLElement>("[data-flight-frame]");
-      const media = frame?.querySelector<HTMLElement>("img");
+      const media = frame?.querySelector<HTMLImageElement>(
+        "[data-flight-media]",
+      );
       const slot = stage.querySelector<HTMLElement>("[data-case-slot]");
       const network = stage.querySelector<HTMLElement>("[data-network]");
       const cases = stage.querySelector<HTMLElement>("[data-cases]");
@@ -114,7 +115,6 @@ export function useWorkToCases({
       const intro = q('[data-cases-out="intro"]');
       const wires = q('[data-cases-out="wires"]');
       const centre = q('[data-cases-out="centre"]');
-      const titleIn = q('[data-cases-in="title"]');
       const studyIn = q('[data-cases-in="study"]');
 
       const mm = gsap.matchMedia();
@@ -124,32 +124,63 @@ export function useWorkToCases({
        * ------------------------------------------------------------ */
       mm.add(CINEMATIC, () => {
         gsap.set(frame, { transformOrigin: "0 0" });
-        gsap.set(media, { transformOrigin: "50% 50%" });
+        /* GSAP covers the frame with this image itself, at every point of the
+           flight, so the element has to fill its box rather than fit inside
+           it — `object-fit` would crop a second time, inside a box that is the
+           wrong shape for most of the move. The CSS keeps `cover` for the
+           static path and for the moment before this runs. */
+        gsap.set(media, { transformOrigin: "0 0", objectFit: "fill" });
 
         /* How far the frame has to travel, and how far along it currently is.
            Both are read live rather than baked into the tween, so a resize
            part-way through can never leave the frame heading for a stale
            slot. */
-        const flight = {
-          x: 0,
-          y: 0,
-          scaleX: 1,
-          scaleY: 1,
-          mediaScaleX: 1,
-          mediaScaleY: 1,
-        };
+        const flight = { x: 0, y: 0, scaleX: 1, scaleY: 1 };
         const travel = { t: 0 };
 
+        /** The image's own aspect ratio. `naturalWidth` is density-corrected
+         *  for a srcset-selected source, but that scales both axes equally, so
+         *  the ratio it reports is still the true one. Falls back to the
+         *  declared attributes until the file has decoded. */
+        const mediaRatio = () => {
+          if (media.naturalWidth && media.naturalHeight) {
+            return media.naturalWidth / media.naturalHeight;
+          }
+          const w = Number(media.getAttribute("width"));
+          const h = Number(media.getAttribute("height"));
+          return w && h ? w / h : 1;
+        };
+
         const apply = () => {
+          const sx = 1 + (flight.scaleX - 1) * travel.t;
+          const sy = 1 + (flight.scaleY - 1) * travel.t;
           gsap.set(frame, {
             x: flight.x * travel.t,
             y: flight.y * travel.t,
-            scaleX: 1 + (flight.scaleX - 1) * travel.t,
-            scaleY: 1 + (flight.scaleY - 1) * travel.t,
+            scaleX: sx,
+            scaleY: sy,
           });
+
+          /* Cover the frame's CURRENT box using the image's own ratio.
+             Computing it live, rather than interpolating between two endpoint
+             scales, is what lets the Work card be a different shape from the
+             case-study slot: at rest this reproduces `object-fit: cover`
+             inside the card, and at the landing it reproduces the slot's cover
+             framing exactly, so the crossfade to the chapter slide underneath
+             has nothing to give away.
+
+             The old `max(scaleX, scaleY)` form only agreed with the slide
+             because the card frame happened to share the image's aspect ratio.
+             With the card fixed at 360:230 it would land the image 48% too
+             wide. */
+          const ratio = mediaRatio();
+          const boxW = frame.offsetWidth * sx;
+          const boxH = frame.offsetHeight * sy;
+          if (!boxW || !boxH) return;
+          const coverW = Math.max(boxW, boxH * ratio);
           gsap.set(media, {
-            scaleX: 1 + (flight.mediaScaleX - 1) * travel.t,
-            scaleY: 1 + (flight.mediaScaleY - 1) * travel.t,
+            scaleX: coverW / boxW,
+            scaleY: coverW / ratio / boxH,
           });
         };
 
@@ -169,9 +200,8 @@ export function useWorkToCases({
             (slotRect.width + FULL_BLEED_OVERSCAN * 2) / width;
           flight.scaleY =
             (slotRect.height + FULL_BLEED_OVERSCAN * 2) / height;
-          const coverScale = Math.max(flight.scaleX, flight.scaleY);
-          flight.mediaScaleX = coverScale / flight.scaleX;
-          flight.mediaScaleY = coverScale / flight.scaleY;
+          /* The media's own scale is not stored: `apply` derives it from the
+             frame's live box and the image's ratio on every frame. */
           /* Re-place it at the progress it is already at. A measurement that
              does not move the playhead — resizing while the study is landed,
              say — would otherwise leave the old distance on screen. */
@@ -196,18 +226,32 @@ export function useWorkToCases({
            `from` half of a `fromTo`: a staggered tween only writes its start
            values when each target's own slice begins, so every element after
            the first would sit there visible until the playhead reached it. */
-        gsap.set(titleIn, { y: 28, autoAlpha: 0 });
         gsap.set(studyIn, { y: 24, autoAlpha: 0 });
+
+        /* The case panel is a full-bleed composition sharing Work's grid cell,
+           and `.work` is transparent, so anything painted in it shows straight
+           through the Work section. `case-featured` arms its first chapter
+           visible — right once the study has landed, wrong while Work is still
+           on screen, where it put an 826 x 900 screenshot behind the project
+           network. This handoff owns the panel's own visibility so it stays
+           out of Work entirely.
+
+           Two elements, because `case-featured` owns [data-case-visual] and
+           [data-case-chapter] and neither may have a second owner:
+             [data-cases]      the panel, including the chapters' 1px rule
+             [data-case-slot]  the full-bleed visual and its #eef1f6 ground
+
+           `autoAlpha` and not `display`: the slot has to keep its layout box,
+           because the flight measures it. */
+        gsap.set([cases, slot], { autoAlpha: 0 });
 
         /* ---------------- rest positions ---------------- */
 
         const workTop = () => stage.offsetTop;
-        /** The last position the sticky is stuck at: one viewport further down
-         *  and the far end of the stage. Derived from layout rather than from
-         *  `window.innerHeight`, so it stays exact if the stage height
-         *  changes. */
-        const casesTop = () =>
-          stage.offsetTop + stage.offsetHeight - sticky.offsetHeight;
+        /** One viewport after Work: the seam where the featured case-study
+         *  ScrollTrigger begins. The sticky continues through its chapters. */
+        const casesTop = () => stage.offsetTop + sticky.offsetHeight;
+        const atCasesTop = () => window.scrollY <= casesTop() + 4;
         /** True once the stage is the section on screen. Keeps a downward
          *  flick in the Hero from launching this move as well as its own. */
         const onStage = () => window.scrollY >= workTop() - 4;
@@ -234,14 +278,22 @@ export function useWorkToCases({
           window.addEventListener("keydown", swallowKeys, { passive: false });
         };
 
-        /** Stop swallowing, but keep the page itself still. Both of this
-         *  stage's positions are rest positions waiting for a gesture, exactly
-         *  as the Hero is at the top of the page. When the flagship's pinned
-         *  chapters land below the study, the `cases` rest is the one that
-         *  should start Lenis again instead. */
+        /** Every position on this stage is a rest position that waits for a
+         *  gesture — the case-study chapters below are stepped too, not
+         *  scrubbed — so the page stays still and only the swallowing stops. */
         const rest = () => {
           unswallow();
           getLenis()?.stop();
+        };
+
+        /* Composite the frame only while it is actually moving.
+           `will-change: transform` locks a layer's raster scale, and this
+           frame grows 2.3x by 4.5x, so leaving it on would keep the landed
+           screenshot rasterised at the Work card's size — the whole reason the
+           arriving visual looked soft. GSAP owns the property outright; the
+           CSS rule that used to set it is gone. */
+        const composite = (on: boolean) => {
+          gsap.set([frame, media], { willChange: on ? "transform" : "auto" });
         };
 
         const jumpTo = (y: number) => {
@@ -268,6 +320,7 @@ export function useWorkToCases({
               phase = "cases";
               jumpTo(casesTop());
               rest();
+              composite(false);
               releaseHandoff(ID);
             },
             onReverseComplete: () => {
@@ -275,6 +328,7 @@ export function useWorkToCases({
               setLeaving(false);
               jumpTo(workTop());
               rest();
+              composite(false);
               releaseHandoff(ID);
             },
           })
@@ -292,12 +346,6 @@ export function useWorkToCases({
           .to(intro, { autoAlpha: 0, y: -44, duration: 0.26 }, 0.14)
           // 3. The impact circle becomes smaller.
           .to(centre, { autoAlpha: 0, scale: 0.72, duration: 0.26 }, 0.16)
-          // 5. The section title arrives.
-          .to(
-            titleIn,
-            { autoAlpha: 1, y: 0, duration: 0.24, stagger: 0.06 },
-            0.38,
-          )
           /* 6. The same frame travels. The proxy carries the progress and
                 `apply` reads the measured distance, so the destination is
                 resolved on every frame instead of at build time. */
@@ -310,12 +358,23 @@ export function useWorkToCases({
             frame,
             {
               borderRadius: 0,
+              backgroundColor: "rgba(251, 249, 247, 0)",
               boxShadow: "0 0 0 rgba(20, 18, 14, 0)",
               duration: 0.4,
               ease: "power1.inOut",
             },
             0.42,
           )
+          /* The panel arrives just before its own copy does. Its ground is the
+             same `--work-cream` the stage is painted in, so on screen this
+             changes nothing — it only stops the visual below from being
+             painted while Work is up. */
+          .set(cases, { autoAlpha: 1 }, 0.78)
+          /* The slot appears on the exact frame the flight lands, when the
+             travelling frame covers it with the 2px overscan and carries the
+             identical image. Any earlier and the full-size screenshot would
+             show around the still-arriving frame. */
+          .set(slot, { autoAlpha: 1 }, 0.82)
           // 7. The study's own copy, once the visual has settled.
           .to(
             studyIn,
@@ -332,6 +391,7 @@ export function useWorkToCases({
           claimHandoff(ID);
           setLeaving(true);
           hold();
+          composite(true);
           measure();
           pace(FORWARD_TIME).play();
         };
@@ -341,6 +401,7 @@ export function useWorkToCases({
           phase = "playing";
           claimHandoff(ID);
           hold();
+          composite(true);
           // The window may have been resized while the study sat landed.
           measure();
           pace(BACK_TIME).reverse();
@@ -349,22 +410,22 @@ export function useWorkToCases({
         /* ---------------- intent ---------------- */
 
         const onWheel = (event: WheelEvent) => {
+          /* The gate has to see every event, including the ones that arrive
+             while a move is playing — those are the tail of the flick that
+             started it, and letting them through would step twice. */
+          const step = wheelStep(event);
           if (handoffBusy(ID)) return;
           if (phase === "playing") {
             event.preventDefault();
             return;
           }
-          if (!onStage()) return;
-          /* `hero-to-work` starts Lenis again when it lands, and this stage
-             has no free-scrolling region of its own, so take the page still
-             back on the first gesture that reaches here. The notch Lenis has
-             already consumed cannot show anything: every scroll position on
-             the stage renders the same sticky frame. */
-          getLenis()?.stop();
-          if (phase === "work" && event.deltaY > 0) {
+          if (step === 0 || !onStage()) return;
+          if (phase === "work" && step > 0) {
+            getLenis()?.stop();
             event.preventDefault();
             forward();
-          } else if (phase === "cases" && event.deltaY < 0) {
+          } else if (phase === "cases" && step < 0 && atCasesTop()) {
+            getLenis()?.stop();
             event.preventDefault();
             back();
           }
@@ -372,13 +433,15 @@ export function useWorkToCases({
 
         const onKey = (event: KeyboardEvent) => {
           if (event.metaKey || event.ctrlKey || event.altKey) return;
+          const step = keyStep(event);
           if (handoffBusy(ID) || phase === "playing") return;
-          if (!onStage()) return;
-          getLenis()?.stop();
-          if (phase === "work" && DOWN_KEYS.has(event.key)) {
+          if (step === 0 || !onStage()) return;
+          if (phase === "work" && step > 0) {
+            getLenis()?.stop();
             event.preventDefault();
             forward();
-          } else if (phase === "cases" && UP_KEYS.has(event.key)) {
+          } else if (phase === "cases" && step < 0 && atCasesTop()) {
+            getLenis()?.stop();
             event.preventDefault();
             back();
           }
@@ -388,6 +451,10 @@ export function useWorkToCases({
            progress it is already at, so this stays correct mid-flight and
            while the study sits landed. */
         const onResize = () => measure();
+        /* The real ratio is only known once the file decodes. The declared
+           attributes cover the gap, but re-placing on load means a wrong pair
+           in the content file can never bake itself into the flight. */
+        const onMediaLoad = () => measure();
 
         const settle = () => {
           if (window.scrollY >= casesTop() - 8) {
@@ -404,12 +471,14 @@ export function useWorkToCases({
         window.addEventListener("wheel", onWheel, { passive: false });
         window.addEventListener("keydown", onKey, { passive: false });
         window.addEventListener("resize", onResize);
+        media.addEventListener("load", onMediaLoad);
 
         return () => {
           window.clearTimeout(settleId);
           window.removeEventListener("wheel", onWheel);
           window.removeEventListener("keydown", onKey);
           window.removeEventListener("resize", onResize);
+          media.removeEventListener("load", onMediaLoad);
           unswallow();
           releaseHandoff(ID);
           tl.kill();
@@ -419,16 +488,16 @@ export function useWorkToCases({
       });
 
       /* --------------------------------------------------------------
-       * Touch, narrow windows and reduced motion: nothing travels. Work
-       * and the case study are two ordinary stacked sections, and the
-       * slot shows its own copy of the image (see Cases.module.css).
+       * Touch, narrow windows and reduced motion: nothing travels. Work and
+       * the complete case story are ordinary stacked sections, with one
+       * screenshot in each chapter (see Cases.module.css).
        * ------------------------------------------------------------ */
       mm.add(STATIC, () => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           return;
         }
 
-        const copy = [...titleIn, ...studyIn];
+        const copy = [...studyIn];
         gsap.set(copy, { y: 24, autoAlpha: 0 });
 
         ScrollTrigger.create({
