@@ -224,8 +224,13 @@ export default function CaseStudies() {
         const onChapters = () => window.scrollY >= casesTop() - 4;
 
         const act = (step: -1 | 0 | 1, event: Event) => {
-          if (step === 0 || moving || handoffBusy(ID)) return;
+          if (moving || handoffBusy(ID)) return;
           if (!onChapters()) return;
+          /* Same backstop as `work-to-cases`: any gesture landing on the
+             chapter range keeps the page still, so nothing can drift off a
+             chapter's rest position and break the ±4px guards. */
+          getLenis()?.stop();
+          if (step === 0) return;
           /* At the first chapter an upward gesture belongs to `work-to-cases`,
              which reverses the whole landing. Leave it alone. */
           const next = chapter + step;

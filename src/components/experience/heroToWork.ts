@@ -172,10 +172,34 @@ export function useHeroToWork({
             window.addEventListener("keydown", swallowKeys, { passive: false });
           };
 
-          const release = () => {
+          const unswallow = () => {
             window.removeEventListener("wheel", swallow);
             window.removeEventListener("touchmove", swallow);
             window.removeEventListener("keydown", swallowKeys);
+          };
+
+          /**
+           * Arrive at a rest position: stop swallowing, but keep the page
+           * still. Hero and Work are both rests that wait for a gesture, and
+           * so is every position `work-to-cases` and `case-featured` land on.
+           *
+           * This is the invariant the whole stage depends on: `scrollY` is
+           * only ever exactly a rest position. The `atWorkTop()` guard below —
+           * and `atCasesTop()`, `onStage()`, `onChapters()` in the two files
+           * downstream — are all ±4px tests, which are only sound while
+           * nothing can drift the scroll between rests. Leaving Lenis running
+           * here was what let the tail of a flick scroll off Work, silently
+           * disable `atWorkTop()`, and strand the viewport in the hidden
+           * hero's region as a blank cream screen.
+           */
+          const rest = () => {
+            unswallow();
+            getLenis()?.stop();
+          };
+
+          /** Full release. Only for teardown, where the page must scroll again. */
+          const release = () => {
+            unswallow();
             getLenis()?.start();
           };
 
@@ -222,7 +246,7 @@ export function useHeroToWork({
               onComplete: () => {
                 phase = "work";
                 running = null;
-                release();
+                rest();
                 releaseHandoff(ID);
               },
             });
@@ -289,10 +313,8 @@ export function useHeroToWork({
               onComplete: () => {
                 phase = "hero";
                 running = null;
-                release();
+                rest();
                 releaseHandoff(ID);
-                // The hero holds the page still again until the next gesture.
-                getLenis()?.stop();
               },
             });
 
@@ -422,7 +444,7 @@ export function useHeroToWork({
                 work.current?.enter();
                 entered = true;
               }
-              release();
+              rest();
             }
           };
 
@@ -436,9 +458,9 @@ export function useHeroToWork({
                 work.current?.enter();
                 entered = true;
               }
-            } else {
-              getLenis()?.stop();
             }
+            // Either way this is a rest position, so the page stays still.
+            rest();
           };
           const settleId = window.setTimeout(settle, 60);
 

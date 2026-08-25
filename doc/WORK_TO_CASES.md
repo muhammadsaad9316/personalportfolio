@@ -387,9 +387,10 @@ Three guards matter:
   true during both. Either handoff would otherwise fire inside the other's
   move. See `handoff.ts`.
 
-Work remains a held rest position. When the frame lands at `casesTop`,
-`rest(true)` resumes Lenis so `case-featured` can scrub the remaining range.
-Returning to Work uses `rest(false)` and holds again.
+Every position on this stage is a held rest position, in both directions:
+`rest()` takes no argument and always stops Lenis. Nothing below the landing
+scrolls freely — the case-study chapters are stepped by gesture too, so there
+is no range for the page to scroll through.
 
 ### Pointer handling
 
@@ -482,12 +483,17 @@ frame remains owned by `work-to-cases`.
 
 ### Featured chapter timeline
 
-`CaseStudies.tsx` owns one labelled timeline with one ScrollTrigger:
+`CaseStudies.tsx` owns one labelled, **paused** timeline. There is no
+ScrollTrigger: the chapters are stepped, not scroll-linked.
 
-- `start = stage.offsetTop + sticky.offsetHeight` (`casesTop`)
-- `end = stage.offsetTop + stage.offsetHeight - sticky.offsetHeight`
-- `scrub: 0.7`; no second pin because `.stageSticky` already supplies it
 - labels: `intro`, `problem`, `approach`, `solution`, `result`
+- chapter *i* is settled at timeline position *i* exactly, and its transition
+  occupies the unit before it. That regularity is what lets the stepper move
+  the playhead a constant distance and get a constant-speed step every time
+- `tweenTo(next, { duration: CHAPTER_TIME, ease: "none" })` — the playhead tween
+  is deliberately unaeased, because the fold's own `power2.inOut` is the easing
+- each chapter rests one viewport further down, and the move is bracketed by the
+  same hold / jump / rest the two section handoffs use
 
 The screenshots **fold**; they do not crossfade. The outgoing panel translates
 `yPercent: -100` up out of the slot while the incoming one rises from
@@ -500,22 +506,29 @@ panel and is gone before the next panel settles, so text is never stranded over
 the wrong image.
 
 Constants live at the top of `CaseStudies.tsx`: `FOLD_EASE`, `FOLD_DUR`,
-`FOLD_LEAD`, `FOLD_SCALE`. The 1.05 lift on the panel leaving and the panel
+`FOLD_SCALE`, and `CHAPTER_TIME`. The 1.05 lift on the panel leaving and the panel
 arriving is deliberately small; a `cover` image only crops further as it
 scales, but more than this reads as a zoom rather than a fold.
 
 Slide 0 must sit at exactly `yPercent: 0, scale: 1`, because the travelling
-Work frame lands on top of it and hands over. The pre-hydration guard in
-`Cases.module.css` parks the other slides at `translateY(100%)` rather than
-`opacity: 0`, so nothing flashes over the first panel before GSAP arms them.
+Work frame lands on top of it and hands over.
+
+The pre-hydration guard in `Cases.module.css` is `opacity: 0`, and it **must
+not** be a transform. GSAP parses an element's existing computed transform into
+its own `x`/`y` cache and then adds `yPercent` on top, so a `translateY(100%)`
+guard and the `yPercent: 100` arming compound to 200%: the slides park two
+viewports down and the fold lands each incoming panel a full frame below its
+slot, permanently invisible. That was a real regression — measured `ty: 1800`
+on a 900px frame. Opacity is the only guard that cannot collide with the
+transform GSAP owns.
 
 ### The slides must load eagerly
 
 Parking them below the frame has a consequence that is easy to miss: **lazy
-loading measures the transformed box.** A slide sitting at `translateY(100%)`
-is genuinely off-screen, so Chrome never starts the fetch — stepping to a
-chapter then showed a completely empty panel, because the image only began
-downloading as it slid in.
+loading measures the transformed box.** A slide GSAP has parked at
+`yPercent: 100` is genuinely off-screen, so Chrome never starts the fetch —
+stepping to a chapter then showed a completely empty panel, because the image
+only began downloading as it slid in.
 
 The crossfade this replaced never hit it: every slide stayed at `inset: 0` and
 only opacity changed, so they all counted as in-view and loaded on their own.
@@ -532,7 +545,15 @@ motion render all five as ordinary stacked articles.
 
 ## 9. Verified
 
-Measured in Playwright at 1440 × 900 unless noted.
+Measured at 1440 × 900 unless noted.
+
+`scripts/gesture-check.js` is the one check kept for this: paste it into the
+DevTools console on a running dev server at a desktop viewport. It drives real
+wheel events and asserts one flick = one step, the exact rest positions, the
+reverse returning the Salam Cargo frame to its card, and a reload restoring the
+right chapter. It runs in two passes because the reload check needs one — paste
+it, let it reload, paste it again. It refuses to run, with a reason, if the
+viewport is not the cinematic one or the page is hidden.
 
 | Check | Result |
 | --- | --- |
@@ -549,13 +570,13 @@ Measured in Playwright at 1440 × 900 unless noted.
 | Full-bleed landing | slot `(0, 0, 826.30×900)`; frame `(-2.10, -2.91, 830.31×904)` — every edge covered, with no seam |
 | Reverse | one upward notch returns the frame to `matrix(1, 0, 0, 1, 0, 0)` — its exact card position |
 | Reverse state | Work heading, cards, wires and circle all back to `visible / 1`; case copy back to `hidden / 0`; `[data-network]` `pointer-events: auto` |
-| Featured chapters | intro at 1800; problem at ~2580; approach at 3280; solution at 3980; result at the 4680 page end |
-| Chapter reverse | one upward scroll from 4680 returns every chapter to intro at 1800; the next notch reverses the outer frame to Work |
-| Keyboard | PageDown lands Work at 900, the case intro at 1800, then advances into the scrubbed story instead of replaying a handoff |
+| Featured chapters | one gesture per chapter: intro 1800, problem 2700, approach 3600, solution 4500, result 5400 — one viewport apart, never scrubbed |
+| Chapter reverse | one upward gesture per chapter back to the intro at 1800; only then does a further gesture reverse the outer frame to Work |
+| Keyboard | PageDown lands Work at 900 and the case intro at 1800, then advances one chapter per press; PageUp reverses the same way |
 | Resize while landed | at 1180 × 800 the slot is `(0, 0, 675.5×800)` and the frame covers it at `(-1.73, -2.47)` through `(677.75, 801.12)` |
-| Page end | 4680 at 1440 × 900; the sticky releases with the result chapter visible and no trailing gap |
+| Page end | 5400 at 1440 × 900, which is exactly max scroll; the sticky releases with the result chapter visible and no trailing gap |
 | Mobile 390 × 844 | stage/sticky are `relative`; all five chapters have `opacity 1`, their own visible image, and normal document flow |
-| Reduced motion | `.stage { height: 520svh }` and the overlapping chapter layout are both gated behind `prefers-reduced-motion: no-preference`; the reduced branch is static. Not re-run under live emulation because the browser harness has no reduced-motion toggle |
+| Reduced motion | `.stage { height: 600svh }` and the overlapping chapter layout are both gated behind `prefers-reduced-motion: no-preference`; the reduced branch is static. Not re-run under live emulation because the browser harness has no reduced-motion toggle |
 | Browser console | no warnings or errors after a clean load and Hero → Work → case → problem interaction |
 | Production build | passes; `/` at 23 kB, 184 kB First Load JS |
 
@@ -576,21 +597,57 @@ applied the new numbers. Fixed by having `measure()` call `apply()` itself.
 
 ---
 
-## 10. Known rough edge
+## 10. Lenis ownership, and the blank cream screen
 
-Lenis momentum can carry the scroll a few hundred pixels **above** the stage top
-without a further wheel event, which leaves the viewport in the hero's region
-while the hero is still hidden — a blank cream screen until the next upward
-gesture fires `back()`. This is pre-existing `hero-to-work` behaviour, not
-introduced here (`atWorkTop()` only fires on a wheel event, and momentum
-arrives without one). Observed at `scrollY 540`. Worth tightening when
-`hero-to-work` is next revisited.
+The stage holds one invariant: **`scrollY` is only ever exactly a rest
+position.** Every guard that routes a gesture — `atWorkTop()`, `atCasesTop()`,
+`onStage()`, `onChapters()` — is a ±4px test, and those are only sound while
+nothing can drift the scroll between rests.
 
-Moving to a gesture drive should reduce it — `work-to-cases` now calls
-`getLenis()?.stop()` on every wheel that reaches the stage, which kills
-momentum at Work's rest position rather than letting it coast. That was a
-side effect, not the goal, and it has not been measured, so treat the rough
-edge as still open.
+For a while one landing broke it. `hero-to-work`'s forward `onComplete` called
+`release()`, which restarts Lenis, so Work was the single position on the stage
+where the page could still scroll freely. The failure that caused was not
+obvious from the symptom:
+
+1. The move lands at `workTop`; Lenis restarts.
+2. The tail of the same flick keeps emitting. The gate returns `0` for those
+   events, the handler returned early without stopping Lenis, and Lenis scrolled
+   the page off the rest position — say to 1400.
+3. `atWorkTop()` is now false, so the Hero return is unreachable; and
+   `work-to-cases` has no upward branch while its phase is `work`.
+4. Nothing intercepts upward scrolling any more. Lenis carries the page up
+   through 900 into the Hero's region, where `heroInner` is `autoAlpha: 0` —
+   a **blank cream screen**. Observed at `scrollY 540`.
+
+The phase was never wrong. What broke was the position invariant, which then
+disabled the only handler that could have recovered.
+
+### The rule
+
+Every arrival at a rest calls `rest()` — stop swallowing, keep the page still.
+`release()`, which restarts Lenis, is **teardown only**. After this change the
+whole codebase contains exactly two `getLenis()?.start()` calls, both in unmount
+cleanup; every other Lenis touch is a `stop()`.
+
+Three sites landed on Work and all three had to change: the forward
+`onComplete`, `onFocusIn` (tabbing into Work is a landing too), and `settle()`
+reloading straight onto Work. Only the first was obvious.
+
+As a backstop, `work-to-cases` and `case-featured` now stop Lenis on **any**
+gesture that reaches their range, including the ones the gate has already
+counted as part of an earlier flick. Every landing stops it correctly now; this
+keeps the invariant true even if a future landing forgets.
+
+### What this does not cover
+
+`lenis.stop()` only intercepts wheel and touch. A scrollbar drag, middle-click
+autoscroll, or a find-in-page jump can still move the document to a non-rest
+position, and from there the same soft-lock is reachable. Closing that needs a
+scroll-position watchdog, which is a scroll controller — deliberately not built.
+
+When ordinary page content finally lands below the last chapter, that chapter
+becomes the one place that must `start()` Lenis again. Until then there is no
+"leaving the stage" path, so there is nothing to resume.
 
 ---
 
@@ -600,7 +657,9 @@ edge as still open.
 | --- | --- |
 | Slower / faster move | `FORWARD_TIME` in `workToCases.ts` (currently `1.9s`) |
 | Slower / faster return | `BACK_TIME` (currently `1.5s`) |
-| Longer / shorter featured story | `.stage` height in `Experience.module.css` (currently `520svh`); the landing seam remains one viewport after Work |
+| Slower / faster chapter step | `CHAPTER_TIME` in `CaseStudies.tsx` (currently `1.15s`) |
+| How readily a gesture counts | `BURST_GAP_MS` / `SETTLE_MS` in `handoff.ts` |
+| Add or remove a chapter | `casesContent.ts`, **and** `.stage` height in `Experience.module.css` — it must stay `(chapters + 1) × 100svh` so the last chapter lands on max scroll (currently `600svh` for five) |
 | Reorder or re-time beats | the position parameters in the timeline table above |
 | Edit chapter copy or screenshot order | `casesContent.ts` |
 | Different flight path feel | the flight tween's `ease` (currently `power1.inOut`) |

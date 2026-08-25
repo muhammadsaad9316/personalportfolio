@@ -32,9 +32,10 @@ import {
  * or left stalled half way. That is the deliberate departure from the "one
  * ScrollTrigger" note in doc/MOTION_ARCHITECTURE.md that both handoffs share.
  *
- * The handoff still has two rest positions: Work at `stage.offsetTop` and the
- * landed study one viewport later. From that seam onward, `case-featured`
- * owns the remaining sticky range and scrubs the project chapters.
+ * The handoff has two rest positions: Work at `stage.offsetTop` and the landed
+ * study one viewport later. From that seam onward `case-featured` owns the
+ * stage, stepping its chapters one gesture at a time — nothing on this stage
+ * is scroll-linked.
  *
  * The preview is not copied or swapped. The element that flies is the Work
  * card's own `.projectFrame`; the case study's left side is an empty,
@@ -419,13 +420,19 @@ export function useWorkToCases({
             event.preventDefault();
             return;
           }
-          if (step === 0 || !onStage()) return;
+          if (!onStage()) return;
+          /* Backstop for the rest invariant. Any gesture that reaches the
+             stage takes the page still again — including the tail of a flick
+             the gate has already counted, which is what used to scroll the
+             page off its rest position after a landing that forgot to stop
+             Lenis. Every landing does stop it now; this makes the invariant
+             hold even if a future one forgets. */
+          getLenis()?.stop();
+          if (step === 0) return;
           if (phase === "work" && step > 0) {
-            getLenis()?.stop();
             event.preventDefault();
             forward();
           } else if (phase === "cases" && step < 0 && atCasesTop()) {
-            getLenis()?.stop();
             event.preventDefault();
             back();
           }
@@ -435,13 +442,13 @@ export function useWorkToCases({
           if (event.metaKey || event.ctrlKey || event.altKey) return;
           const step = keyStep(event);
           if (handoffBusy(ID) || phase === "playing") return;
-          if (step === 0 || !onStage()) return;
+          if (!onStage()) return;
+          getLenis()?.stop();
+          if (step === 0) return;
           if (phase === "work" && step > 0) {
-            getLenis()?.stop();
             event.preventDefault();
             forward();
           } else if (phase === "cases" && step < 0 && atCasesTop()) {
-            getLenis()?.stop();
             event.preventDefault();
             back();
           }
