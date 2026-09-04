@@ -70,14 +70,11 @@
     height: 100%;
   }
 
-  /* Six rest positions for one sticky viewport: Work, the case-study landing,
-     then one for each of the four chapters after the intro. Nothing scrubs
-     across this range — every beat is stepped by gesture — so it exists only
-     to give each beat a scroll position of its own. 600 = 6 x 100, which also
-     puts the last chapter exactly at the page bottom, with no dead space after
-     it. */
+  /* Eight viewport bands: Work, the case landing, four later case chapters,
+     Ending and Contact. The final band is Contact's rest; the sticky releases
+     over the next viewport into the footer. */
   .stage {
-    height: 600svh;
+    height: 800svh;
   }
 
   .stageSticky {
@@ -95,5 +92,19 @@
   .stageSticky > * {
     grid-area: 1 / 1;
     min-width: 0;
+  }
+}
+
+.caseLayer {
+  position: relative;
+  min-height: 100svh;
+  outline: none;
+}
+
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and
+  (prefers-reduced-motion: no-preference) {
+  .caseLayer {
+    height: 100%;
+    min-height: 0;
   }
 }

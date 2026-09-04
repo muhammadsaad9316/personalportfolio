@@ -6,18 +6,20 @@
  * wide, fine pointer, normal motion). It drives real wheel events and asserts
  * against measured layout.
  *
- * It runs in two passes because one of the four checks needs a reload:
+ * It runs in two passes because one of the five checks needs a reload:
  *
- *   1. paste it   → runs the first three checks, then reloads the page
+ *   1. paste it   → runs the first four checks, then reloads the page
  *   2. paste it again → finishes the reload check and prints the summary
  *
- * Covers exactly four things, all of which have broken at least once:
+ * Covers exactly five things, all of which have broken at least once:
  *
  *   1. One flick equals one step. A hard flick emits events for well over a
  *      second; every one of them past the first must be ignored.
- *   2. Rest positions are exact, and the last one is the page bottom.
+ *   2. Case and closing rest positions line up with the sticky release and
+ *      footer exactly.
  *   3. Reversing returns the Salam Cargo frame to its Work card, to the pixel.
- *   4. Reloading part-way through the story restores that chapter.
+ *   4. Closing colour belongs to the moving curtain, not the panel root.
+ *   5. Reloading part-way through the story restores that chapter.
  */
 (async () => {
   const KEY = "gesture-check";
@@ -41,7 +43,7 @@
     return "page is hidden, so requestAnimationFrame is stopped and no GSAP timeline can advance — show the page and rerun";
   }
 
-  /** The seven beats: hero, work, case intro, then one per remaining chapter. */
+  /** Hero, Work, case intro, then one rest per remaining chapter. */
   const vh = () => sticky.offsetHeight;
   const rests = () => {
     const top = stage.offsetTop;
@@ -108,7 +110,7 @@
     const shown = chapters.findIndex((c) => +getComputedStyle(c).opacity > 0.5);
 
     ok(
-      "4. reload restores the chapter",
+      "5. reload restores the chapter",
       shown === expectIndex &&
         Math.abs(ty(slides[expectIndex])) < 2 &&
         Math.abs(scrollY - expectScroll) < 4,
@@ -131,10 +133,36 @@
   }
 
   const map = rests();
+  const ending = map[map.length - 1] + vh();
+  const contact = ending + vh();
+  const stickyRelease = stage.offsetTop + stage.offsetHeight - vh();
+  const footer = document.querySelector("[data-after-stage]")?.offsetTop;
+  const max = document.documentElement.scrollHeight - innerHeight;
   ok(
     "2. rest positions exact",
-    map[map.length - 1] === document.documentElement.scrollHeight - innerHeight,
-    `rests ${map.join(", ")}; last vs max scroll ${document.documentElement.scrollHeight - innerHeight}`,
+    contact === stickyRelease && footer === max,
+    `case rests ${map.join(", ")}; ending ${ending}; contact ${contact}; sticky release ${stickyRelease}; footer ${footer}; max ${max}`,
+  );
+
+  const endingPanel = document.querySelector('[data-closing-panel="ending"]');
+  const endingSurface = endingPanel?.querySelector('[data-closing-surface]');
+  const caseSurface = document.querySelector('[data-cases]');
+  const rootBackground = endingPanel
+    ? getComputedStyle(endingPanel).backgroundColor
+    : "missing";
+  const curtainBackground = endingSurface
+    ? getComputedStyle(endingSurface).backgroundColor
+    : "missing";
+  const caseBackground = caseSurface
+    ? getComputedStyle(caseSurface).backgroundColor
+    : "missing";
+  const rootIsClear =
+    rootBackground === "transparent" ||
+    /rgba\([^)]*,\s*0(?:\.0+)?\)$/.test(rootBackground);
+  ok(
+    "4. closing colour belongs to the moving curtain",
+    rootIsClear && curtainBackground !== caseBackground,
+    `root ${rootBackground}; curtain ${curtainBackground}; case ${caseBackground}`,
   );
 
   await step(1); // hero → work
@@ -157,7 +185,7 @@
 
   console.table(results.map((r) => ({ check: r.name, result: r.pass ? "PASS" : "FAIL", detail: r.detail })));
 
-  // Park on a chapter and reload, for check 4.
+  // Park on a chapter and reload, for check 5.
   const expectIndex = 2; // "approach"
   const expectScroll = map[2 + expectIndex];
   sessionStorage.setItem(KEY + ":earlier", JSON.stringify(results));
