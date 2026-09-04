@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import type { WorkHandle } from "@/components/work/Work";
 import { getLenis } from "@/components/SmoothScroll";
+import { registerStageBeat, stageReleased } from "./stageBeats";
 import {
   DOWN_KEYS,
   UP_KEYS,
@@ -255,7 +256,18 @@ export function useWorkToCases({
         const atCasesTop = () => window.scrollY <= casesTop() + 4;
         /** True once the stage is the section on screen. Keeps a downward
          *  flick in the Hero from launching this move as well as its own. */
-        const onStage = () => window.scrollY >= workTop() - 4;
+        /** The last rest the stage owns — the final chapter, which is also
+         *  exactly where the sticky unpins. Past it the closing sections are in
+         *  ordinary document flow and nothing here may hold the page.
+         *
+         *  This used to be unbounded above, which was correct while the stage
+         *  was the whole page. Left that way it stops Lenis on every gesture in
+         *  the ending, the contact section and the footer — the entire lower
+         *  page becomes unscrollable. */
+        const stageEnd = () =>
+          stage.offsetTop + stage.offsetHeight - sticky.offsetHeight;
+        const onStage = () =>
+          window.scrollY >= workTop() - 4 && window.scrollY <= stageEnd() + 4;
 
         /* ---------------- scroll lock ---------------- */
 
@@ -427,7 +439,9 @@ export function useWorkToCases({
              page off its rest position after a landing that forgot to stop
              Lenis. Every landing does stop it now; this makes the invariant
              hold even if a future one forgets. */
-          getLenis()?.stop();
+          /* ...unless the story has already handed the page back, in which
+             case this is the tail of the flick that left. */
+          if (!stageReleased()) getLenis()?.stop();
           if (step === 0) return;
           if (phase === "work" && step > 0) {
             event.preventDefault();
@@ -443,7 +457,9 @@ export function useWorkToCases({
           const step = keyStep(event);
           if (handoffBusy(ID) || phase === "playing") return;
           if (!onStage()) return;
-          getLenis()?.stop();
+          /* ...unless the story has already handed the page back, in which
+             case this is the tail of the flick that left. */
+          if (!stageReleased()) getLenis()?.stop();
           if (step === 0) return;
           if (phase === "work" && step > 0) {
             event.preventDefault();
@@ -469,11 +485,28 @@ export function useWorkToCases({
             phase = "cases";
             setLeaving(true);
             measure();
-            tl.progress(1);
+            /* Restoration is a state seek, not a replay. Suppress the forward
+               completion callback or it jumps every deeper beat back to the
+               case-study landing. */
+            tl.progress(1, true);
           }
           if (onStage()) rest();
         };
         const settleId = window.setTimeout(settle, 60);
+
+        /* See `stageBeats.ts`. Seeking the paused timeline to 0 restores
+           the Work layout outright — it is the same path the reverse
+           takes, just without the time in between. */
+        const unregister = registerStageBeat(ID, {
+          order: 1,
+          reset: () => {
+            tl.pause(0);
+            phase = "work";
+            setLeaving(false);
+            composite(false);
+          },
+          settle,
+        });
 
         window.addEventListener("wheel", onWheel, { passive: false });
         window.addEventListener("keydown", onKey, { passive: false });

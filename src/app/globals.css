@@ -25,6 +25,18 @@
   --accent-hover: #648427;
   --accent-bright: #a6ce59;
 
+  /* Closing sequence: berry rose, mineral lilac and deep plum keep the
+     existing olive complementary while ending the cream story decisively. */
+  --ending-rose: #7f344f;
+  --ending-rose-muted: #d8c3ce;
+  --closing-dark: #211527;
+  --closing-dark-deep: #18101d;
+  --closing-light: #dcd3e2;
+  --closing-text: #f4eef6;
+  --closing-muted: #b9acbd;
+  --closing-light-muted: #5e5163;
+  --closing-accent: #4a631b;
+
   /* Lines */
   --line: #e3ded8;
   --line-dark: #262626;
@@ -36,7 +48,8 @@
   --gutter: clamp(20px, 3.2vw, 56px);
   --shell: 1560px;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
   --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
   --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", "Cascadia Mono", Menlo, monospace;
 }
@@ -61,7 +74,8 @@ body {
   background: var(--cream);
   color: var(--text);
   font-family: var(--font-sans);
-  font-synthesis-weight: none;
+  font-optical-sizing: auto;
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-x: hidden;

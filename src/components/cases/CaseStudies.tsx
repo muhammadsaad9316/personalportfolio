@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRef } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { getLenis } from "@/components/SmoothScroll";
 import {
   DOWN_KEYS,
@@ -13,6 +13,7 @@ import {
   releaseHandoff,
   wheelStep,
 } from "@/components/experience/handoff";
+import { registerStageBeat } from "@/components/experience/stageBeats";
 import { FLAGSHIP_CHAPTERS } from "./casesContent";
 import styles from "./Cases.module.css";
 
@@ -27,15 +28,61 @@ const ID = "case-featured";
  *  has already arrived — matching them would make the story drag. */
 const CHAPTER_TIME = 1.15;
 
-/* The fold between chapters, in timeline units (one unit per chapter).
-   `power2.inOut` matters more than the numbers: a linear translate feels
-   mechanical, and a stronger ease feels like it sticks. */
-const FOLD_EASE = "power2.inOut";
-const FOLD_DUR = 0.82;
-/** Slight lift on the panel that is leaving and the one still arriving. Small
- *  on purpose — a `cover` image only crops further, but any more than this
- *  reads as a zoom rather than a fold. */
-const FOLD_SCALE = 1.05;
+/* The chapter change is a mask reveal, measured in timeline units (one unit
+   per chapter). The incoming screenshot is uncovered from its top edge
+   downward while the one before it stays exactly where it is underneath —
+   the picture is not carried into the frame, the frame stops hiding it. */
+const MASK_OPEN = "inset(0% 0% 0% 0%)";
+const MASK_SHUT = "inset(0% 0% 100% 0%)";
+const MASK_EASE = "power2.inOut";
+const MASK_DUR = 0.54;
+
+/** The picture keeps easing out of a slight zoom after the mask edge has
+ *  passed, which is what stops the reveal reading as a flat wipe. It runs the
+ *  whole 0.9 units a step owns, so it is still moving when the mask lands.
+ *
+ *  Nothing in a step may outlast that 0.9. The playhead is stepped between
+ *  whole numbers and parked there, so a tween reaching past `at` would freeze
+ *  part-finished until the next gesture. */
+const SETTLE_EASE = "power2.out";
+const SETTLE_DUR = 0.9;
+/** 1.08, not the 1.3 of the reference effect: these are dense UI screenshots
+ *  painted `cover` at full viewport height, so anything above 1 is magnifying
+ *  the derivative that was actually fetched. Small enough to stay legible,
+ *  large enough to feel the settle. */
+const IMAGE_ZOOM = 1.08;
+
+/* ------------------------------------------------------------ the copy
+
+   The copy does not arrive as a block. Label, title, body and facts each
+   land on their own beat, so the panel assembles in reading order instead
+   of appearing all at once — the title is the one that carries the move,
+   rising line by line out of its own mask, which is the same gesture the
+   screenshot beside it is making.
+
+   Every part is timed against `at`, so each number reads as how long before
+   the chapter settles that part starts. Two hard edges bound the window:
+
+     -0.60  the outgoing block has finished leaving, so nothing here may
+            start earlier without two chapters' text being on screen at once
+      0.00  the playhead parks, so nothing here may finish later or it
+            freezes part-done until the next gesture
+
+   `amount` staggers rather than per-element ones on purpose: it spends a
+   fixed budget however many lines or facts a chapter turns out to have, so
+   a five-line title cannot walk past `at`. */
+const COPY_OPENS = -0.6;
+const COPY = {
+  label: { at: -0.6, dur: 0.3 },
+  title: { at: -0.52, dur: 0.38, amount: 0.14 },
+  body: { at: -0.36, dur: 0.3 },
+  proof: { at: -0.3, dur: 0.22, amount: 0.08 },
+};
+
+/** How far below its mask a title line waits, as a share of its own height.
+ *  Must clear the descender room the mask adds in `Cases.module.css` —
+ *  1.0 plus that padding — or the top of the line shows before it moves. */
+const LINE_RISE = 120;
 
 /** The flagship story. Work-to-cases owns the travelling outer frame; this
  * section owns only the chapter copy, screenshot crossfades, and the shared
@@ -66,20 +113,52 @@ export default function CaseStudies() {
       const mm = gsap.matchMedia();
 
       mm.add(CINEMATIC, () => {
-        /* The visuals are a vertical conveyor, not a crossfade. Each panel
-           folds up out of the frame while the next rises into its place from
-           below, and both stay fully opaque the whole way: a dissolve reads as
-           two pictures blending, where the point here is that one panel
-           physically replaces another. The slot's `overflow: hidden` is the
-           frame they pass through.
+        /* The visuals are a stack, not a conveyor. Every panel sits in the
+           slot the whole time and is uncovered in place by its own mask,
+           which opens from the top edge down over the panel before it.
+           Nothing slides, so the picture being read never moves out from
+           under the reader, and the incoming one arrives already at its
+           final framing instead of travelling into it.
 
-           Slide 0 has to sit at exactly `yPercent: 0, scale: 1`, because the
+           The mask is an `inset()` clip-path on the slide itself; the slot's
+           `overflow: hidden` is still the outer frame.
+
+           Slide 0 has to sit fully open at image scale 1, because the
            travelling Work frame lands on top of it and hands over. */
-        gsap.set(visuals, { yPercent: 100, scale: FOLD_SCALE, autoAlpha: 1 });
-        gsap.set(visuals[0], { yPercent: 0, scale: 1 });
-        gsap.set(chapters, { opacity: 0, y: 46 });
-        gsap.set(chapters[0], { opacity: 1, y: 0 });
+        gsap.set(visuals, { clipPath: MASK_SHUT, autoAlpha: 1 });
+        gsap.set(visuals[0], { clipPath: MASK_OPEN });
+        /* The article is a gate now, not a mover: the parts inside it carry
+           the entrance, so this only decides whether a chapter is on screen.
+           Plain `opacity` and not `autoAlpha`, because all five chapters
+           stay in the accessibility tree in document order. */
+        gsap.set(chapters, { opacity: 0, y: 0 });
+        gsap.set(chapters[0], { opacity: 1 });
         if (sharedMedia) gsap.set(sharedMedia, { autoAlpha: 1 });
+
+        /* Split every chapter title into masked lines, once, up front.
+           `mask: "lines"` wraps each line in its own `overflow: clip` box,
+           which is what lets a line rise out of nothing instead of fading in
+           place. `aria: "auto"` is the default and matters here: it copies
+           the heading's text onto its own `aria-label` and hides the pieces,
+           so a screen reader still reads one sentence, not a stack of lines.
+
+           Chapter 0 is deliberately left whole. Its entrance belongs to
+           `work-to-cases`, which animates `[data-cases-in="study"]` — the
+           wrapper this timeline must not touch. */
+        const splits: SplitText[] = [];
+        const titleLines = (chapter: HTMLElement) => {
+          const title = chapter.querySelector<HTMLElement>(
+            '[data-chapter-part="title"]',
+          );
+          if (!title) return [];
+          const split = SplitText.create(title, {
+            type: "lines",
+            mask: "lines",
+            linesClass: "caseTitleLine",
+          });
+          splits.push(split);
+          return split.lines as HTMLElement[];
+        };
 
         /* Paused, not scrubbed. A scrub makes scroll DISTANCE the progress, so
            a hard flick walks several chapters at once and a gentle one crawls.
@@ -97,13 +176,23 @@ export default function CaseStudies() {
 
         timeline.addLabel("intro", 0);
         if (sharedMedia) {
-          /* Release the travelling Work image to the gallery underneath during
-             the first step. The slide below it is the identical file at the
-             identical framing, so this is invisible. */
+          /* Release the travelling Work image to the gallery underneath. The
+             slide below it is the identical file at the identical framing, so
+             this is invisible; the dissolve exists only to soften the frames
+             2px overscan rather than cut it away.
+
+             It has to be finished before the first mask moves. This used to
+             run 0.1 -> 0.5, straight through the first reveal, which the fold
+             got away with because the outgoing panel was sliding out of the
+             slot anyway. A mask uncovers the new picture *in place*, so a
+             still-visible shared image sits on top of it as a ghost of the
+             old one -- measured at 0.21 opacity with the mask half open.
+             Owning exactly the dead 0.1 units before the first transition
+             keeps the two apart by construction. */
           timeline.to(
             sharedMedia,
-            { autoAlpha: 0, duration: 0.4, ease: "power1.inOut" },
-            0.1,
+            { autoAlpha: 0, duration: 0.1, ease: "power1.inOut" },
+            0,
           );
         }
 
@@ -111,49 +200,127 @@ export default function CaseStudies() {
           const at = index;
           /* The transition runs in the unit before its chapter settles. */
           const from = at - 0.9;
+          const image = visuals[index].querySelector("img");
+
           timeline
             .addLabel(FLAGSHIP_CHAPTERS[index].id, at)
-            /* Both panels ride the same curve at the same time, so they read
-               as one strip moving rather than two animations that happen to
-               overlap. The outgoing one grows very slightly as it leaves,
-               which lifts it toward the viewer instead of letting it slide
-               flatly off a plane. */
-            .to(
-              visuals[index - 1],
-              {
-                yPercent: -100,
-                scale: FOLD_SCALE,
-                duration: FOLD_DUR,
-                ease: FOLD_EASE,
-              },
-              from,
-            )
+            /* The mask edge sweeps the full height of the slot. The panel
+               underneath is never touched — it is simply covered, which is
+               the whole point: one picture is drawn over another, rather
+               than two pictures both moving. */
             .fromTo(
               visuals[index],
-              { yPercent: 100, scale: FOLD_SCALE },
-              {
-                yPercent: 0,
-                scale: 1,
-                duration: FOLD_DUR,
-                ease: FOLD_EASE,
-              },
+              { clipPath: MASK_SHUT },
+              { clipPath: MASK_OPEN, duration: MASK_DUR, ease: MASK_EASE },
               from,
-            )
+            );
+
+          if (image) {
+            /* Starts with the mask and outlasts it, so the picture is still
+               easing back to its true size for a moment after the edge has
+               gone past. */
+            timeline.fromTo(
+              image,
+              { scale: IMAGE_ZOOM },
+              { scale: 1, duration: SETTLE_DUR, ease: SETTLE_EASE },
+              from,
+            );
+          }
+
+          const label = chapters[index].querySelector(
+            '[data-chapter-part="label"]',
+          );
+          const lines = titleLines(chapters[index]);
+          const body = chapters[index].querySelector('[data-chapter-part="body"]');
+          const facts = chapters[index].querySelectorAll(
+            '[data-chapter-part="proof"]',
+          );
+
+          timeline
             /* The copy goes with the panel it belongs to: it starts leaving on
                the same frame and is gone well before the new panel settles, so
-               text is never stranded over the wrong image. */
+               text is never stranded over the wrong image. The exit stays on
+               the article as one block — a staggered exit would compete with
+               the staggered entrance answering it half a second later, and
+               this is the half nobody is reading. */
             .to(
               chapters[index - 1],
               { opacity: 0, y: -34, duration: 0.3, ease: "power2.in" },
               from,
             )
-            /* The next line lands exactly as the chapter settles. */
+            /* Ungate the incoming article the instant that exit finishes. It
+               carries no motion of its own; everything inside it is still
+               parked at its from-state, so there is nothing to see yet. */
+            .set(chapters[index], { opacity: 1 }, at + COPY_OPENS)
+
+            /* The label wipes in from the left rather than fading. It is one
+               short mono line, and a wipe on it rhymes with the mask opening
+               on the screenshot instead of arguing with it. */
             .fromTo(
-              chapters[index],
-              { opacity: 0, y: 46 },
-              { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
-              at - 0.42,
-            );
+              label,
+              { clipPath: "inset(0% 100% 0% 0%)", opacity: 0 },
+              {
+                clipPath: "inset(0% 0% 0% 0%)",
+                opacity: 1,
+                duration: COPY.label.dur,
+                ease: "power2.out",
+              },
+              at + COPY.label.at,
+            )
+
+            /* The move. Each line rises out of its own clip box, one just
+               behind the last, so the sentence builds top to bottom in the
+               same direction the picture is being uncovered. No fade: a line
+               emerging from a hard edge is what makes it read as type being
+               set rather than text switching on. */
+            .fromTo(
+              lines,
+              { yPercent: LINE_RISE },
+              {
+                yPercent: 0,
+                duration: COPY.title.dur,
+                ease: "power3.out",
+                stagger: { amount: COPY.title.amount },
+              },
+              at + COPY.title.at,
+            )
+
+            /* Body and facts follow the title rather than racing it. */
+            .fromTo(
+              body,
+              { opacity: 0, y: 22 },
+              {
+                opacity: 1,
+                y: 0,
+                duration: COPY.body.dur,
+                ease: "power2.out",
+              },
+              at + COPY.body.at,
+            )
+            /* The facts are the only place with any overshoot, and it is small
+               — they are pills, so a touch of spring reads as them settling
+               into place. Anything more would look like a toy. */
+            .fromTo(
+              facts,
+              { opacity: 0, y: 14, scale: 0.96 },
+              {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: COPY.proof.dur,
+                ease: "back.out(1.5)",
+                stagger: { amount: COPY.proof.amount },
+              },
+              at + COPY.proof.at,
+            )
+            /* Once the new panel covers it completely, drop the one below out
+               of the paint. Nothing slides off-frame any more, so without
+               this every chapter already passed stays stacked behind the
+               current one, and the last chapter paints five full-viewport
+               screenshots in the same box. It reverses on its own: GSAP
+               restores the recorded value as the playhead crosses back, one
+               step ahead of the mask above it reopening. */
+            .set(visuals[index - 1], { autoAlpha: 0 }, at);
         }
 
         /* ---------------- stepping ---------------- */
@@ -219,9 +386,16 @@ export default function CaseStudies() {
           });
         };
 
+        /* The closing hook owns the next two stage beats and the final release.
+           This section stops at its result chapter and lets that shared parent
+           handle a downward gesture from there. */
+        const lastTop = () => chapterTop(last);
+
         /** True when the chapters own the gesture. Below this the Work handoff
-         *  and the case landing are still in charge. */
-        const onChapters = () => window.scrollY >= casesTop() - 4;
+         *  and the case landing are still in charge; past the last chapter the
+         *  closing sections are. */
+        const onChapters = () =>
+          window.scrollY >= casesTop() - 4 && window.scrollY <= lastTop() + 4;
 
         const act = (step: -1 | 0 | 1, event: Event) => {
           if (moving || handoffBusy(ID)) return;
@@ -231,10 +405,15 @@ export default function CaseStudies() {
              chapter's rest position and break the ±4px guards. */
           getLenis()?.stop();
           if (step === 0) return;
+          const next = chapter + step;
+          /* The parent closing transition owns this seam. Do not prevent the
+             event; its listener reads the same memoised gesture. */
+          if (next > last) {
+            return;
+          }
           /* At the first chapter an upward gesture belongs to `work-to-cases`,
              which reverses the whole landing. Leave it alone. */
-          const next = chapter + step;
-          if (next < 0 || next > last) return;
+          if (next < 0) return;
           event.preventDefault();
           goTo(next);
         };
@@ -246,6 +425,13 @@ export default function CaseStudies() {
         };
 
         const settle = () => {
+          if (window.scrollY > lastTop() + 4) {
+            /* Ending/Contact deep loads still need the result chapter behind
+               their curtains so reversing reaches the correct case state. */
+            chapter = last;
+            timeline.time(last);
+            return;
+          }
           /* Reloaded part-way through the story: start on that chapter. */
           const index = Math.round(
             (window.scrollY - casesTop()) / sticky.offsetHeight,
@@ -257,16 +443,32 @@ export default function CaseStudies() {
         };
         const settleId = window.setTimeout(settle, 80);
 
+        /* See `stageBeats.ts` — this is what the footer unwinds first. */
+        const unregister = registerStageBeat(ID, {
+          order: 0,
+          reset: () => {
+            timeline.pause(0);
+            chapter = 0;
+            moving = false;
+          },
+          settle,
+        });
+
         window.addEventListener("wheel", onWheel, { passive: false });
         window.addEventListener("keydown", onKey, { passive: false });
 
         return () => {
           window.clearTimeout(settleId);
+          unregister();
           window.removeEventListener("wheel", onWheel);
           window.removeEventListener("keydown", onKey);
           unswallow();
           releaseHandoff(ID);
+          /* Kill first, revert second: `revert()` puts the original heading
+             markup back, so any tween still pointing at a line element has to
+             be gone before those elements are. */
           timeline.kill();
+          splits.forEach((split) => split.revert());
         };
       });
 
@@ -335,23 +537,29 @@ export default function CaseStudies() {
                 data-cases-in={index === 0 ? "study" : undefined}
               >
                 {chapter.label && (
-                  <p className={styles.chapterLabel}>
+                  <p className={styles.chapterLabel} data-chapter-part="label">
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <span className={styles.slash}>/</span>
                     {chapter.label}
                   </p>
                 )}
 
-                <h2 className={styles.chapterTitle}>{chapter.title}</h2>
+                <h2 className={styles.chapterTitle} data-chapter-part="title">
+                  {chapter.title}
+                </h2>
 
                 {chapter.body && (
-                  <p className={styles.chapterBody}>{chapter.body}</p>
+                  <p className={styles.chapterBody} data-chapter-part="body">
+                    {chapter.body}
+                  </p>
                 )}
 
                 {chapter.proof && (
                   <ul className={styles.proof} aria-label="Key points">
                     {chapter.proof.map((item) => (
-                      <li key={item}>{item}</li>
+                      <li key={item} data-chapter-part="proof">
+                        {item}
+                      </li>
                     ))}
                   </ul>
                 )}
