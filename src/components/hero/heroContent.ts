@@ -109,8 +109,8 @@ export const CHART_SERIES: { values: number[]; delta: number }[] = [
 
 /** Type specimen card. */
 export const TYPE_SPECS = [
-  { label: "Inter Regular", weight: 400 },
-  { label: "Inter Medium", weight: 500 },
-  { label: "Inter SemiBold", weight: 600 },
-  { label: "Inter Bold", weight: 700 },
+  { label: "Bricolage 400", weight: 400 },
+  { label: "Bricolage 500", weight: 500 },
+  { label: "Bricolage 600", weight: 600 },
+  { label: "Bricolage 700", weight: 700 },
 ];

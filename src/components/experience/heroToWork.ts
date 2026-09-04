@@ -5,6 +5,7 @@ import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import type { HeroHandle } from "@/components/hero/Hero";
 import type { WorkHandle } from "@/components/work/Work";
 import { getLenis } from "@/components/SmoothScroll";
+import { registerStageBeat } from "./stageBeats";
 import {
   DOWN_KEYS,
   UP_KEYS,
@@ -464,6 +465,25 @@ export function useHeroToWork({
           };
           const settleId = window.setTimeout(settle, 60);
 
+          /* The footer's "Back to top" unwinds the stage through this.
+             The reset is the same restore the unmount cleanup performs,
+             minus the teardown — and it is the last one to run, because
+             the beats it contains have to come apart first. */
+          const unregister = registerStageBeat(ID, {
+            order: 2,
+            reset: () => {
+              running?.kill();
+              running = null;
+              phase = "hero";
+              entered = false;
+              gsap.set([heroInner, scene], { autoAlpha: 1 });
+              gsap.set(wash, { autoAlpha: 0 });
+              work.current?.reset();
+              hero.current?.setAmbient(true);
+            },
+            settle,
+          });
+
           window.addEventListener("wheel", onWheel, { passive: false });
           window.addEventListener("keydown", onKey, { passive: false });
           window.addEventListener("focusin", onFocusIn);
@@ -473,6 +493,7 @@ export function useHeroToWork({
             window.removeEventListener("wheel", onWheel);
             window.removeEventListener("keydown", onKey);
             window.removeEventListener("focusin", onFocusIn);
+            unregister();
             releaseHandoff(ID);
             release();
             running?.kill();

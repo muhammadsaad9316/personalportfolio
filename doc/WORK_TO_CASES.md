@@ -48,12 +48,18 @@ two pictures dissolving into each other.
 
 | File | Job |
 | --- | --- |
-| `src/components/experience/Experience.tsx` | The shared wrapper. Holds Hero, Work and Case Studies, and calls one hook per transition. Owns no motion itself. |
+| `src/components/experience/Experience.tsx` | The shared wrapper. Holds Hero, Work, Case Studies, Ending and Contact, and calls one hook per transition. Owns no motion itself. |
 | `src/components/experience/workToCases.ts` | The `work-to-cases` timeline and its gesture handling. |
+| `src/components/experience/closingTransitions.ts` | The two nested-curtain timelines, their gesture handling, Closing rest restoration, and Contact → Footer release. |
 | `src/components/experience/handoff.ts` | The gesture gate every beat shares: it collapses a flick into one step, enforces a settle window, and holds the one-owner lock. Animates nothing. |
 | `src/components/cases/CaseStudies.tsx` | Case Studies structure and content. |
 | `src/components/cases/Cases.module.css` | Case Studies layout and static styling. |
 | `src/components/cases/casesContent.ts` | Case Studies copy and image data. |
+| `src/components/experience/stageBeats.ts` | The register the stage's beats share, so the footer can unwind a story it knows nothing about. Holds `reset`/`settle` per beat plus the `released` and `travelling` flags. Animates nothing. |
+| `src/components/ending/Ending.tsx` | The aubergine case-study ending and its nested curtain structure. |
+| `src/components/contact/Contact.tsx` | The final contact section. |
+| `src/components/contact/siteLinks.ts` | Contact and footer destinations. **Placeholders** — see §12. |
+| `src/components/footer/SiteFooter.tsx` | The footer, `data-after-stage` destination, Back to top, and stage-aware navigation. |
 | `public/media/screenshotofSalamCargoo/*.png` | Five supplied 2800 × 2640 product screenshots used by the shared preview and featured chapters. Near-square on purpose — see §8. |
 
 ### Renamed
@@ -82,8 +88,8 @@ the stage rather than a plain Work wrapper. The JSX moved to `Experience.tsx`.
 
 ## 3. The stage
 
-Work and the first case study are two children of **one sticky,
-viewport-height grid cell**. Both sit in `grid-area: 1 / 1`, so they occupy the
+Work, the first case study, Ending and Contact are children of **one sticky,
+viewport-height grid cell**. They all sit in `grid-area: 1 / 1`, so they occupy the
 same space and the frame can travel from one layout to the other without ever
 leaving the document.
 
@@ -91,7 +97,9 @@ leaving the document.
 <div ref={stageRef} className={styles.stage}>
   <div ref={stickyRef} className={styles.stageSticky}>
     <Work ref={work} />
-    <CaseStudies />
+    <div data-closing-case><CaseStudies /></div>
+    <Ending />
+    <Contact />
   </div>
 </div>
 ```
@@ -104,7 +112,7 @@ leaving the document.
 }
 
 @media (cinematic) {
-  .stage        { height: 600svh; }
+  .stage        { height: 800svh; }
   .stageSticky  { position: sticky; top: 0; height: 100svh;
                   overflow: hidden; display: grid;
                   grid-template-columns: 100%; grid-template-rows: 100%; }
@@ -123,9 +131,10 @@ Verified in the browser: `position: sticky`, height 900 at a 900px viewport.
 
 ### Scroll map
 
-The stage is **seven rest positions, not a scrub track**. Work rests at the
-stage top, the case landing one viewport later, and each remaining chapter one
-viewport after that. Nothing on this stage is scroll-linked.
+The experience is **discrete rest positions, not a scrub track**. Work rests at
+the stage top, the case landing one viewport later, each remaining chapter one
+viewport after that, followed by Ending and Contact. Nothing on this stage is
+scroll-linked.
 
 At a 1440 × 900 viewport:
 
@@ -138,14 +147,18 @@ At a 1440 × 900 viewport:
 | The problem | 2700 | |
 | The approach | 3600 | |
 | The solution | 4500 | |
-| The result | 5400 (max scroll) | Sticky releases exactly here — no dead space |
+| The result | 5400 | Closing timeline state `0/0` |
+| Ending | 6300 | Closing timeline state `1/0` |
+| Contact | 7200 | Closing timeline state `1/1`; final held beat |
+| Footer | 8100 (max scroll) | Sticky released; Lenis active |
 
-`600svh` = six beats of one viewport each. Nothing scrubs across that range —
+`800svh` = eight stage bands of one viewport each. Nothing scrubs across that range —
 every beat is stepped by gesture — so it exists only to give each beat a scroll
 position of its own, which keeps the scrollbar honest and lets a reload land
 back on the right chapter. `casesTop` is `stage.offsetTop + sticky.offsetHeight`
 and chapter *i* rests at `casesTop + i * sticky.offsetHeight`, so the last
-chapter falls exactly on max scroll.
+chapter lands at 5400; Ending and Contact add the final two rests before the
+footer at max scroll.
 
 ### Stacking
 
@@ -155,6 +168,8 @@ Inside the stage's own stacking context:
 .stage (z-index 1, below .heroScene at 2)
   └─ .work   z-index 2      ← the travelling frame lives in here
   └─ .cases  z-index 1
+  └─ .ending z-index 4
+  └─ .contact z-index 5
 ```
 
 Work paints **above** the case panel. That is deliberate: mid-flight the frame
@@ -427,10 +442,15 @@ Everything above.
 ### The visual layers in cinematic mode
 
 The case-study gallery sits inside the measured slot underneath the travelling
-Work frame. Its first image matches the shared frame exactly. Once chapter
-scrolling begins, `case-featured` fades the shared image while the frame's
+Work frame. Its first image matches the shared frame exactly. On the first
+chapter step `case-featured` fades the shared image while the frame's
 background is already transparent, exposing the gallery with no replacement
 flash.
+
+That fade owns the first **0.1 units of the timeline and nothing more**, so it
+is finished before the first mask starts moving. See §8 — with a reveal rather
+than a fold, a shared image still fading during the sweep is a ghost of the old
+picture lying on top of the new one.
 
 ---
 
@@ -491,51 +511,164 @@ ScrollTrigger: the chapters are stepped, not scroll-linked.
   occupies the unit before it. That regularity is what lets the stepper move
   the playhead a constant distance and get a constant-speed step every time
 - `tweenTo(next, { duration: CHAPTER_TIME, ease: "none" })` — the playhead tween
-  is deliberately unaeased, because the fold's own `power2.inOut` is the easing
+  is deliberately unaeased, because the mask's own `power2.inOut` is the easing
 - each chapter rests one viewport further down, and the move is bracketed by the
   same hold / jump / rest the two section handoffs use
 
-The screenshots **fold**; they do not crossfade. The outgoing panel translates
-`yPercent: -100` up out of the slot while the incoming one rises from
-`yPercent: 100` below it, both on the same `power2.inOut` curve over the same
-0.82 units, so they read as one strip moving rather than two animations that
-happen to overlap. Both stay fully opaque — a dissolve reads as two pictures
-blending, and the point is that one panel replaces another. The only opacity in
-the move belongs to the copy, which starts leaving on the same frame as its own
-panel and is gone before the next panel settles, so text is never stranded over
-the wrong image.
+### The chapters reveal; they do not fold or crossfade
 
-Constants live at the top of `CaseStudies.tsx`: `FOLD_EASE`, `FOLD_DUR`,
-`FOLD_SCALE`, and `CHAPTER_TIME`. The 1.05 lift on the panel leaving and the panel
-arriving is deliberately small; a `cover` image only crops further as it
-scales, but more than this reads as a zoom rather than a fold.
+Every panel sits in the slot the whole time at `inset: 0`. A step **uncovers**
+the incoming one in place, by opening an `inset()` clip-path on the slide from
+its top edge downward, over the panel before it. Nothing translates. The panel
+underneath is not animated at all — it is simply covered.
 
-Slide 0 must sit at exactly `yPercent: 0, scale: 1`, because the travelling
-Work frame lands on top of it and hands over.
+This replaced a vertical fold, where the outgoing panel translated
+`yPercent: -100` out of the slot while the incoming one rose from
+`yPercent: 100` below. The reveal was chosen because the picture the reader is
+actually looking at never moves out from under them, and the incoming one
+arrives already at its final framing instead of travelling into it.
 
-The pre-hydration guard in `Cases.module.css` is `opacity: 0`, and it **must
-not** be a transform. GSAP parses an element's existing computed transform into
-its own `x`/`y` cache and then adds `yPercent` on top, so a `translateY(100%)`
-guard and the `yPercent: 100` arming compound to 200%: the slides park two
-viewports down and the fold lands each incoming panel a full frame below its
-slot, permanently invisible. That was a real regression — measured `ty: 1800`
-on a 900px frame. Opacity is the only guard that cannot collide with the
-transform GSAP owns.
+Two tweens per step, both starting at the same instant:
 
-### The slides must load eagerly
+| Tween | Target | From → to | Units |
+| --- | --- | --- | --- |
+| the mask | `[data-case-visual]` | `inset(0% 0% 100%)` → `inset(0% 0% 0%)` | 0.54, `power2.inOut` |
+| the settle | the `img` inside it | `scale: 1.08` → `1` | 0.90, `power2.out` |
 
-Parking them below the frame has a consequence that is easy to miss: **lazy
-loading measures the transformed box.** A slide GSAP has parked at
-`yPercent: 100` is genuinely off-screen, so Chrome never starts the fetch —
-stepping to a chapter then showed a completely empty panel, because the image
-only began downloading as it slid in.
+The settle **outlasts the mask on purpose**: the picture is still easing back to
+its true size for a moment after the edge has passed, which is what stops the
+reveal reading as a flat wipe. Measured mid-step at 1440 × 900: mask 50% open,
+image at `scale 1.0274`; mask fully open, image still at `1.0051`.
 
-The crossfade this replaced never hit it: every slide stayed at `inset: 0` and
-only opacity changed, so they all counted as in-view and loaded on their own.
+`IMAGE_ZOOM` is 1.08 and not the 1.3 of the reference effect, because these are
+dense UI screenshots painted `cover` at full viewport height — every step above
+1 magnifies the derivative that was actually fetched. See the softness notes
+above.
 
-So slides 1–4 carry `loading="eager"`. Only slide 0 is `priority` — the rest
-load with the page but without a preload hint, so they never compete with the
-one that is actually on screen.
+**Nothing in a step may outlast 0.9 units.** The transition starts at `at - 0.9`
+and the playhead is stepped between whole numbers and parked, so a tween
+reaching past `at` would freeze part-finished until the next gesture. That is
+the ceiling `SETTLE_DUR` is sitting on.
+
+The only other opacity in the move belongs to the copy, which starts leaving on
+the same frame as its own panel and is gone before the next panel settles, so
+text is never stranded over the wrong image.
+
+Constants live at the top of `CaseStudies.tsx`: `MASK_OPEN`, `MASK_SHUT`,
+`MASK_EASE`, `MASK_DUR`, `SETTLE_EASE`, `SETTLE_DUR`, `IMAGE_ZOOM`, and
+`CHAPTER_TIME`.
+
+Slide 0 must sit fully open at image `scale: 1`, because the travelling Work
+frame lands on top of it and hands over.
+
+### Covered panels are dropped from the paint
+
+A fold carried each spent panel out of the slot, so `overflow: hidden` stopped
+painting it. A reveal does not: without help, every chapter already passed stays
+stacked behind the current one, and the last chapter paints five full-viewport
+screenshots in the same box.
+
+So each step ends with a zero-duration `set(visuals[index - 1], { autoAlpha: 0 })`
+at position `at` — 0.08 units after the mask above it has finished covering.
+It reverses on its own: GSAP restores the recorded value as the playhead crosses
+back, a clear 0.36 units before that mask starts reopening, so there is no window
+in which a closing mask exposes a hidden panel. Verified in both directions.
+
+### The copy assembles; it does not arrive
+
+The article is a **gate**, not a mover. It carries no motion of its own any
+more — a zero-duration `opacity` set turns it on, and the parts inside it do
+the work, each on its own beat, so the panel reads in the order it is written
+rather than appearing all at once.
+
+| Part | Starts | Lasts | Move |
+| --- | --- | --- | --- |
+| label | `at - 0.60` | 0.30 | `clip-path` wipe in from the left, with opacity |
+| title | `at - 0.52` | 0.38 + 0.14 stagger | each line rises `yPercent: 120 → 0` out of its own mask. No fade |
+| body | `at - 0.36` | 0.30 | opacity and `y: 22 → 0` |
+| facts | `at - 0.30` | 0.22 + 0.08 stagger | opacity, `y: 14 → 0`, `scale: 0.96 → 1`, `back.out(1.5)` |
+
+Two hard edges bound that window, and both are load-bearing:
+
+- **`at - 0.60`** is when the outgoing block has finished leaving. Nothing may
+  start earlier without two chapters' text being on screen together, which is
+  the thing §8 keeps insisting on.
+- **`at`** is where the playhead parks. Nothing may finish later, for the same
+  reason the picture's settle may not — it would freeze part-done until the
+  next gesture.
+
+The staggers are `{ amount: … }` and not per-element on purpose: `amount`
+spends a fixed budget however many lines or facts a chapter turns out to have,
+so adding a longer title cannot walk the animation past `at`.
+
+The **exit stays on the article as one block**, unchanged. A staggered exit
+would compete with the staggered entrance answering it half a second later,
+and it is the half nobody is reading.
+
+### The title is split, and the split has to be reverted
+
+`SplitText.create(title, { type: "lines", mask: "lines", linesClass: "caseTitleLine" })`.
+The `mask` option wraps each line in its own box carrying an inline
+`overflow: clip`, and that edge is what a line rises out of — which is why the
+title reads as type being set rather than text switching on.
+
+Three things about it are easy to get wrong:
+
+1. **Accessibility is handled, but only because `aria` defaults to `"auto"`.**
+   That copies the heading's text onto its own `aria-label` and marks the
+   generated pieces `aria-hidden`, so a screen reader still reads one sentence.
+   Verified: all four split headings carry the full sentence as `aria-label`.
+2. **Descenders.** At `line-height: 1.02` the clip edge lands almost on the
+   baseline and shears the tails off g, y and p. `Cases.module.css` gives the
+   mask `padding-bottom: 0.16em` to move the edge down and an equal negative
+   `margin-bottom` to hand the space back, and `.chapterTitle` is
+   `display: flow-root` so that last negative margin cannot collapse out of the
+   heading and drag the body copy up. Measured: mask 53px against a 46px line,
+   and the title-to-body gap unchanged at its 22px floor.
+   `LINE_RISE` must stay above `100 + that padding`, or a parked line peeks over
+   its own edge. It is 120.
+3. **It must be reverted.** `revert()` puts the original heading markup back, so
+   the cleanup kills the timeline *first* — a tween still pointing at a line
+   element has to be gone before that element is. Leaving the cinematic
+   breakpoint therefore restores plain headings; verified at 820px, where all
+   12 line wrappers, all 12 masks and all four `aria-label`s are gone and every
+   chapter is readable in document flow.
+
+**Chapter 0 is deliberately left whole** — unsplit, and with no part animation.
+Its entrance is the flight landing, owned by `work-to-cases` through
+`[data-cases-in="study"]`, and that wrapper is not this timeline's to touch.
+
+### The pre-hydration guard must stay `opacity`
+
+The guard in `Cases.module.css` is `opacity: 0`, and it must not become anything
+else, because every other candidate now has an owner: `clip-path` is the mask
+itself, and a transform would be read into GSAP's own `x`/`y` cache and
+compounded rather than replaced. A `translateY(100%)` guard plus a
+`yPercent: 100` arming once compounded to 200% — the slides parked two viewports
+down, permanently invisible, measured `ty: 1800` on a 900px frame. Opacity is
+the only guard that cannot collide with what GSAP owns.
+
+### The slides load eagerly
+
+Slides 1–4 carry `loading="eager"`. Only slide 0 is `priority` — the rest load
+with the page but without a preload hint, so they never compete with the one
+that is actually on screen.
+
+This was originally a hard requirement of the fold, and the reason is worth
+keeping because it will apply again to anything that parks an image outside the
+frame: **lazy loading measures the transformed box.** A slide parked at
+`yPercent: 100` is genuinely off-screen, so Chrome never started the fetch, and
+stepping to that chapter showed a completely empty panel.
+
+The mask does not have that problem — every slide stays at `inset: 0`, so all
+five are in view as far as the loader is concerned and would load on their own.
+`eager` is kept anyway: it costs nothing and it is one less thing depending on
+how a clipped box is classified.
+
+Being in view does **not** make them Largest Contentful Paint candidates. Until
+the flight lands, `[data-case-slot]` is `autoAlpha: 0`, and a `visibility:
+hidden` element is not LCP-eligible. Confirmed on a clean load: LCP is the hero
+portrait, and no case screenshot appears in the entry list.
 
 The chapter articles remain in accessible document order. Their inactive
 desktop states use opacity rather than visibility, while touch and reduced
@@ -558,11 +691,33 @@ viewport is not the cinematic one or the page is hidden.
 | Check | Result |
 | --- | --- |
 | One gesture forward | a single wheel notch at Work plays the whole move; `scrollY` stays 900 for the entire flight and lands at 1800 |
-| Slides parked exactly one frame down | `ty` is 0, 900, 900, 900, 900 at a 900px frame — pure `yPercent` with no cached offset, so `yPercent: 0` lands the incoming panel at `ty: 0`, in frame |
+| Chapter masks arm correctly | on load at 1440 × 900 the five slides report `inset(0%)` then `inset(0% 0% 100%)` × 4 — slide 0 open, the rest shut, all at `opacity: 1` with the CSS guard cleared by `autoAlpha` |
+| Mask sweeps top to bottom, in place | seeking one step, the bottom inset runs 100 → 97.46 → 50 → 6.97 → 0% across units 0.1 → 0.64, while the panel underneath holds `inset(0%)` and is never animated. Identical at all four transitions |
+| Picture still settling when the edge lands | image `scale` 1.08 → 1.0562 → 1.0274 → 1.0137 → **1.0051 at mask completion** → exactly 1 at `at`. Nothing outlasts the 0.9 units the step owns |
+| Covered panels dropped from the paint | painted set at rests 0–4: `VVVVV`, `-VVVV`, `--VVV`, `---VV`, `----V` — by the last chapter only its own slide is painted |
+| Reverse restores paint before the mask reopens | stepping back, the set restores in lockstep to `VVVVV`, and the restore lands 0.36 units before the mask above it starts closing — verified by seek and by four real upward flicks |
+| Shared Work image gone before the first mask moves | retimed to own units 0 → 0.1: opacity 1 / 0.5 / 0 at t = 0, 0.05, 0.1 while slide 1 is still fully shut. It previously ran 0.1 → 0.5, straight through the sweep, sitting at **0.21 opacity with the mask half open** and ghosting the old picture over the new one |
+| Chapter step frame timing | one real flick, dev build, 131 frames: median **16.6ms**, p90 19.2ms, p99 32.8ms, 2 frames over 32ms — while the synthetic flick was itself dispatching 150 wheel events. Trace reports CLS 0.00 and no jank insight |
+| Reveal is LCP-safe | clean load, no interaction: LCP is the hero portrait; no case screenshot appears in the entry list, because `[data-case-slot]` is `visibility: hidden` until the flight lands. Slides being in view at `inset: 0` does not make them candidates |
+| Closing curtains | at 1440 × 900, result → Ending lands 5400 → 6300 and Ending → Contact lands 6300 → 7200. At roughly 49% background coverage the label/support remain at opacity 0 and heading characters remain fully parked; the first label appears at roughly 72% coverage. The berry/lilac surface is the only painted background, all three wrappers land at zero transform, and reverse restores `+900 / -900 / +135px` with the result chapter visible and active |
+| Closing frame timing | production build, result → Ending, 88 sampled frames: median **16.7ms**, p95 16.8ms, p99 16.9ms, worst 17.1ms, **0 frames over 32ms**, CLS **0.0000** |
+| Footer release | one further gesture from Contact glides 7200 → 8100, the footer's exact top and page maximum; an upward flick re-captures Contact at 7200 |
+| One long flick, one closing beat | a 1.5s synthetic wheel burst at 30ms intervals advances result → Ending only, never straight through to Contact |
+| Back to top | from 4981: 624 → 88 → 9 → 0, hero `visible`, chapters back to `[1,0,0,0,0]`, slides back to `[open, shut × 4]`. The story then replays from the beginning |
+| Footer links into the stage | Work and Case Studies still restore their existing rests; Contact now restores 7200 directly. `work-to-cases` uses `tl.progress(1, true)` so settling a deeper beat cannot replay its completion jump back to the case intro |
+| Deep restoration | fresh `#ending` and `#contact` loads land 6300 / 7200 with the correct panel visible; a page-bottom reload restores 8100 with the footer at viewport top |
+| Static mode | at 390 × 844 and under live reduced-motion emulation the sticky is `relative`, Ending/Contact are visible and non-inert in document flow, and the footer remains reachable |
+| Chapter copy cascades in order | seeking one step: gate opens at `at - 0.60`, label clip 100 → 57.9 → 12.5 → 0.8 → 0%, title lines at 55/55/55 → 24/55/55 → 6/19/44 → 0/3/10 → 0/0/0 px, then body and facts. Everything is at rest by `at` |
+| Title splits, and only where it should | 3 lines and 3 masks on each of chapters 1–4; chapter 0 unsplit, because its entrance belongs to `work-to-cases` |
+| Split is invisible to assistive tech | all four split headings carry the full sentence as `aria-label`, generated pieces are `aria-hidden` |
+| Descenders survive the mask | 53px mask against a 46px line; g, y and p render whole on *Every booking. Every handoff. One system.* Title-to-body gap unchanged at its 22px floor, so the negative margin is not collapsing out |
+| Split reverts leaving cinematic | at 820px: 0 line wrappers, 0 masks, 0 `aria-label`s left, all five titles back to plain text, every chapter `opacity: 1` in document flow — and re-arms to 12 lines on the way back up |
+| Step frame timing with the copy animating | one real flick, dev build, 131 frames: median **16.7ms**, p90 16.8, p99 17.5, worst 17.9 — **0 frames over 20ms**. Adding the copy cascade did not cost a frame |
+| Forward and reverse walk | five chapters forward then five back by real flicks: masks open and close in order, chapter copy tracks, and every rest lands exactly one viewport apart in both directions |
 | No CSS transform on anything GSAP transforms | all four Hero `[data-exit]` targets report `cssTransform: "none"`, and `.copy` keeps its centring on its own box (rect unchanged at `46, 209, 340 × 455`) |
 | Every chapter image ready before it is needed | all five slot images report `complete: true` with a decoded source on load, and the network shows one `w=1920&q=88` fetch per screenshot |
 | One gesture, one beat | the real `handoff.ts` compiled and driven through recorded input patterns: a 2.5s hard trackpad flick (250 events) → **1 step**; a 0.3s gentle flick (25 events) → **1 step**; three deliberate flicks 3s apart → **3 steps**; four single notches 3s apart → **4 steps**; a steady wheel roll for 10s → **5 steps**; an accidental double-tick 100ms apart → **1 step** |
-| Seven rest positions | at 1440 × 900: 0, 900, 1800, 2700, 3600, 4500, 5400, with 5400 exactly equal to max scroll |
+| Closing landmarks | at 1440 × 900: Hero 0, Work 900, case intro 1800, chapters 2700 / 3600 / 4500 / result 5400, Ending 6300, Contact 7200, footer 8100; the footer is page maximum |
 | Card previews all one height | all four `.projectFrame` boxes measure 354 × 226 at 1440 (335 × 214 at 375), so the near-square flagship screenshot no longer makes its card taller than the other three |
 | Landing after the card was un-pinned from the image ratio | with a 354 × 226 frame, the live-box cover form puts the media at 959.6 × 904 against the slide's 955.35 × 900 — a 0.25 × 0 difference once the 2px overscan per side is removed |
 | Touch path unaffected by the cover rewrite | at 375: `object-fit: cover`, `transform: none`, no counter-scale — GSAP's `fill` is scoped to the cinematic branch |
@@ -574,11 +729,11 @@ viewport is not the cinematic one or the page is hidden.
 | Chapter reverse | one upward gesture per chapter back to the intro at 1800; only then does a further gesture reverse the outer frame to Work |
 | Keyboard | PageDown lands Work at 900 and the case intro at 1800, then advances one chapter per press; PageUp reverses the same way |
 | Resize while landed | at 1180 × 800 the slot is `(0, 0, 675.5×800)` and the frame covers it at `(-1.73, -2.47)` through `(677.75, 801.12)` |
-| Page end | 5400 at 1440 × 900, which is exactly max scroll; the sticky releases with the result chapter visible and no trailing gap |
+| Page end | 8100 at 1440 × 900, exactly the footer top and max scroll; the sticky releases after Contact |
 | Mobile 390 × 844 | stage/sticky are `relative`; all five chapters have `opacity 1`, their own visible image, and normal document flow |
-| Reduced motion | `.stage { height: 600svh }` and the overlapping chapter layout are both gated behind `prefers-reduced-motion: no-preference`; the reduced branch is static. Not re-run under live emulation because the browser harness has no reduced-motion toggle |
+| Reduced motion | `.stage { height: 800svh }` and every overlapping panel are gated behind `prefers-reduced-motion: no-preference`; live emulation confirms the reduced branch is static, visible and native-scrollable |
 | Browser console | no warnings or errors after a clean load and Hero → Work → case → problem interaction |
-| Production build | passes; `/` at 23 kB, 184 kB First Load JS |
+| Production build | passes; `/` at 28.1 kB, 192 kB First Load JS |
 
 ### Two GSAP behaviours worth remembering
 
@@ -645,9 +800,14 @@ autoscroll, or a find-in-page jump can still move the document to a non-rest
 position, and from there the same soft-lock is reachable. Closing that needs a
 scroll-position watchdog, which is a scroll controller — deliberately not built.
 
-When ordinary page content finally lands below the last chapter, that chapter
-becomes the one place that must `start()` Lenis again. Until then there is no
-"leaving the stage" path, so there is nothing to resume.
+That last paragraph used to read *when ordinary page content finally lands*
+*below the last chapter, that chapter becomes the one place that must*
+*`start()` Lenis again.* It has landed. See §13.
+
+The scrollbar-drag hole is now partly closed as a consequence, because the
+one position it could strand the page in — below the story — is exactly the
+boundary §13 had to watch anyway. Dragging *within* the stage is still
+uncovered.
 
 ---
 
@@ -658,8 +818,15 @@ becomes the one place that must `start()` Lenis again. Until then there is no
 | Slower / faster move | `FORWARD_TIME` in `workToCases.ts` (currently `1.9s`) |
 | Slower / faster return | `BACK_TIME` (currently `1.5s`) |
 | Slower / faster chapter step | `CHAPTER_TIME` in `CaseStudies.tsx` (currently `1.15s`) |
+| Faster / slower mask sweep | `MASK_DUR` (currently `0.54` units) and `MASK_EASE` |
+| More / less zoom on the arriving picture | `IMAGE_ZOOM` (currently `1.08`) — above ~1.12 the screenshot magnifies visibly |
+| How long the picture keeps settling | `SETTLE_DUR` (currently `0.9`) and `SETTLE_EASE`. **0.9 is the ceiling**, see §8 |
+| Re-time any part of the chapter copy | the `COPY` table at the top of `CaseStudies.tsx`. Every `at` is negative and relative to the chapter landing; keep them inside `COPY_OPENS`…`0` |
+| More / less cascade across title lines or facts | the `amount` values in `COPY`. Use `amount`, never a per-element stagger, so a longer title cannot overrun |
+| How far a title line waits below its mask | `LINE_RISE` (currently `120`) — must stay above 100 + the mask padding in `Cases.module.css` |
+| Descenders clipped on a title | the `padding-bottom` / `margin-bottom` pair on `.chapterTitle :global(.caseTitleLine-mask)`; move them together |
 | How readily a gesture counts | `BURST_GAP_MS` / `SETTLE_MS` in `handoff.ts` |
-| Add or remove a chapter | `casesContent.ts`, **and** `.stage` height in `Experience.module.css` — it must stay `(chapters + 1) × 100svh` so the last chapter lands on max scroll (currently `600svh` for five) |
+| Add or remove a chapter | `casesContent.ts`, **and** `.stage` height in `Experience.module.css` — it must stay `(chapters + 3) × 100svh`: Work + all chapters + Ending + Contact (currently `800svh` for five chapters) |
 | Reorder or re-time beats | the position parameters in the timeline table above |
 | Edit chapter copy or screenshot order | `casesContent.ts` |
 | Different flight path feel | the flight tween's `ease` (currently `power1.inOut`) |
@@ -668,12 +835,87 @@ becomes the one place that must `start()` Lenis again. Until then there is no
 
 ---
 
+## 13. Leaving the stage
+
+Ending and Contact now belong to the same cinematic stage as the flagship case
+study. The footer is the first ordinary-flow surface below it.
+
+### Geometry and ownership
+
+With five case chapters, `.stage` is `800svh`: one band for Work, five for the
+case landing/chapters, one for Ending and one for Contact. At 1440 × 900 the
+logical rests are Work 900, case intro 1800, result 5400, Ending 6300 and
+Contact 7200. The footer starts at 8100, exactly one viewport after Contact and
+exactly equal to page maximum because the footer itself is at least `100svh`.
+
+`case-featured` stops at the result. `closing-sequence` owns both later seams
+and the only final release. This avoids two listeners trying to leave the case
+stage on the same gesture.
+
+### The two approved curtains
+
+Both moves reuse the same paused structure from the supplied reference:
+
+- outgoing surface: `yPercent: 0 → -15`
+- incoming outer wrapper: `100 → 0`
+- incoming inner wrapper: `-100 → 0`
+- incoming surface: `15 → 0`
+- the panel roots stay transparent; only the moving surfaces paint berry or
+  lilac, so no full-screen colour can appear before the curtain reaches it
+- background sweep: `0.94s`, `power3.inOut`
+- the label begins once the surface is about two-thirds revealed, followed by
+  ordered masked SplitText characters and supporting copy; the whole move
+  settles at about `1.22s`
+
+The timelines reverse for upward gestures. They do not use Observer, wrap
+around, scrub, or global fixed-section CSS. `handoff.ts` still decides when a
+gesture counts, Lenis stays stopped, and the scroll jumps to the new logical
+rest only after the timeline lands. Inactive panels are both `visibility:
+hidden` and `inert`, so their links cannot receive focus; a keyboard reversal
+moves focus out of the panel being hidden.
+
+### Contact → Footer, and coming back
+
+One gesture down from Contact sets `stageReleased(true)` and runs a forced
+Lenis glide to the footer while Lenis remains stopped. The temporary event hold
+stays through the 520ms tail window, then Lenis restarts. Starting Lenis first
+would let the initiating flick pass the footer rest.
+
+Scrolling upward from the footer re-captures Contact at 7200. The same three
+guards still apply: cross the rest by 8px before re-entry, swallow the tail for
+700ms, and ignore the boundary while `stageTravelling()` marks a deliberate
+footer navigation or Back-to-top journey.
+
+### Restoration and footer navigation
+
+The closing beat settles last (order 3), after Hero, Work and the case chapter
+state. Result / Ending / Contact are represented by timeline states `0/0`,
+`1/0`, and `1/1`; positions below Contact show `1/1`, set released, and restart
+Lenis. Fresh `#ending` and `#contact` loads map their physical overlapping DOM
+anchors to the correct logical rests.
+
+Footer links to Work, Case Studies and Contact therefore reset, jump and call
+`settleStage()` instead of using ordinary hash scrolling. Restoration seeks
+`work-to-cases` with `tl.progress(1, true)`: suppressing callbacks is essential,
+because replaying its forward completion would jump a Contact restore back to
+the case-study intro. Back to top still resets every beat before gliding home.
+
+---
+
 ## 12. Not built yet
 
 - **Case studies 02–04** — Time Mardan, Danx Detailing, Miru Closet, as the
-  short shared entrance pattern. Copy is in `doc/simpleenglish.md`.
-- **Case-study ending, contact, footer.**
+  short shared entrance pattern. Copy is in `doc/simpleenglish.md`. These belong
+  **between** the flagship and the ending, so the ending's *Different problems.*
+  *Same approach.* currently follows a single case study rather than four.
+  Inserting them requires extending the stage/flow before the two closing
+  beats; `[data-after-stage]` remains on the footer because it marks the final
+  release, not the case-to-ending seam.
+- An **About** section. `doc/moresimple.md` lists it in the footer navigation;
+  the link is left out until there is something to point at.
 - The Work cards link to `/work/<slug>` routes that do not exist yet.
+- Real destinations for the contact email and the social links. They are
+  deliberately obvious placeholders in `src/components/contact/siteLinks.ts`.
 
 ### Case-study split
 

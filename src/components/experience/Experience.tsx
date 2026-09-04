@@ -4,8 +4,11 @@ import { useRef } from "react";
 import Hero, { type HeroHandle } from "@/components/hero/Hero";
 import Work, { type WorkHandle } from "@/components/work/Work";
 import CaseStudies from "@/components/cases/CaseStudies";
+import Ending from "@/components/ending/Ending";
+import Contact from "@/components/contact/Contact";
 import { useHeroToWork } from "./heroToWork";
 import { useWorkToCases } from "./workToCases";
+import { useClosingTransitions } from "./closingTransitions";
 import styles from "./Experience.module.css";
 
 /**
@@ -47,6 +50,7 @@ export default function Experience() {
     work,
   });
   useWorkToCases({ rootRef, stageRef, stickyRef, work });
+  useClosingTransitions({ rootRef, stageRef, stickyRef });
 
   return (
     <div ref={rootRef} className={styles.experience}>
@@ -63,7 +67,15 @@ export default function Experience() {
           data-experience-sticky
         >
           <Work ref={work} />
-          <CaseStudies />
+          <div
+            className={styles.caseLayer}
+            data-closing-case
+            tabIndex={-1}
+          >
+            <CaseStudies />
+          </div>
+          <Ending />
+          <Contact />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 /* Flagship Case Study — CSS owns layout and static styling. GSAP owns
-   transform/opacity on [data-case-chapter] and [data-case-visual]. */
+   transform/opacity on [data-case-chapter], the clip-path mask on
+   [data-case-visual], and the scale on the image inside it. */
 
 .cases {
   position: relative;
@@ -29,10 +30,14 @@
 .visualSlide {
   position: absolute;
   inset: 0;
-  transform-origin: center center;
-  /* Transform only: the chapters fold rather than crossfade, so opacity is no
-     longer animated on these. */
-  will-change: transform;
+  /* GSAP owns `clip-path` here and `transform` on the image inside. CSS must
+     set neither, not even statically.
+
+     No `will-change`: the mask repaints on the main thread whatever this
+     declares, and a permanent promotion is exactly what locked the raster
+     scale and softened the landed screenshot once already — see
+     doc/WORK_TO_CASES.md section 8. GSAP's own `force3D: "auto"` promotes
+     the image for the length of its scale tween and drops it again. */
 }
 
 .visualImage {
@@ -95,6 +100,24 @@
   line-height: 1.02;
   letter-spacing: -0.045em;
   color: var(--text);
+  /* Contains the line masks below, so the last one's negative margin cannot
+     collapse out of the heading and drag the body copy up with it. */
+  display: flow-root;
+}
+
+/* SplitText builds these: each title line is wrapped in a box carrying the
+   plugin's own inline `overflow: clip`, and that is the edge a line rises out
+   of. Global because the elements are generated rather than authored. GSAP owns
+   their transform; this rule owns only the box.
+
+   The padding is not decoration. At `line-height: 1.02` the clip edge sits
+   almost on the baseline and shears the descenders off g, y and p. It moves the
+   edge down; the equal negative margin hands the space straight back, so the
+   title's leading is unchanged. Keep `LINE_RISE` in CaseStudies.tsx above
+   100 + this value, or a parked line peeks over its own edge. */
+.chapterTitle :global(.caseTitleLine-mask) {
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
 }
 
 .intro .chapterTitle {
@@ -108,8 +131,11 @@
 .chapterBody {
   margin-top: clamp(22px, 3.4vh, 36px);
   max-width: 40ch;
-  font-size: clamp(0.96rem, 1.08vw, 1.12rem);
-  line-height: 1.65;
+  font-family: var(--font-serif);
+  font-size: clamp(1.1rem, 1.22vw, 1.3rem);
+  font-weight: 400;
+  line-height: 1.48;
+  letter-spacing: -0.015em;
   color: var(--text-muted);
 }
 
@@ -156,12 +182,12 @@
   /* Hidden before GSAP arms them, so nothing flashes over the first panel
      during hydration.
 
-     This MUST NOT be a transform. GSAP reads an element's existing computed
-     transform into its own `x`/`y` cache and then adds `yPercent` on top, so a
-     `translateY(100%)` here and `yPercent: 100` in the arming compound to
-     200% — the slides park two viewports down, and the fold lands the incoming
-     one a full frame below the slot, permanently invisible. Opacity is the
-     only guard that cannot collide with the transform GSAP owns. */
+     Opacity, and nothing else, because every other candidate now has an
+     owner. `clip-path` is the mask GSAP animates. A transform would be read
+     into GSAP's own `x`/`y` cache and compounded rather than replaced — a
+     `translateY(100%)` guard plus a `yPercent: 100` arming once parked these
+     slides two viewports down, permanently invisible. Opacity is the only
+     guard that cannot collide with what GSAP owns. */
   .visualSlide:not(:first-child) {
     opacity: 0;
   }
