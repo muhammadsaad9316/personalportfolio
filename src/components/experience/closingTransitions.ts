@@ -238,6 +238,7 @@ export function useClosingTransitions({
         ];
         let current = 0;
         let moving = false;
+        let releaseTimer = 0;
         let reentryUntil = 0;
         let moveTween: gsap.core.Tween | null = null;
 
@@ -352,11 +353,11 @@ export function useClosingTransitions({
             lenis.scrollTo(afterTop(), {
               duration: 1.1,
               force: true,
-              onComplete: () => window.setTimeout(finishRelease, 520),
+              onComplete: () => { releaseTimer = window.setTimeout(finishRelease, 520); },
             });
           } else {
             window.scrollTo({ top: afterTop(), behavior: "smooth" });
-            window.setTimeout(finishRelease, 1200);
+            releaseTimer = window.setTimeout(finishRelease, 1200);
           }
         };
 
@@ -414,16 +415,7 @@ export function useClosingTransitions({
         };
 
         const settle = () => {
-          const hash = window.location.hash;
-          if (hash === "#ending") jumpTo(top(1));
-          if (hash === "#contact") jumpTo(top(2));
-
-          const y =
-            hash === "#ending"
-              ? top(1)
-              : hash === "#contact"
-                ? top(2)
-                : window.scrollY;
+          const y = window.scrollY;
           if (y > top(2) + 4) {
             seek(2);
             setStageReleased(true);
@@ -455,6 +447,8 @@ export function useClosingTransitions({
         const unregister = registerStageBeat(ID, {
           order: 3,
           reset: () => {
+            window.clearTimeout(releaseTimer);
+            releaseHandoff(ID);
             moveTween?.kill();
             moveTween = null;
             moving = false;
@@ -468,15 +462,14 @@ export function useClosingTransitions({
         window.addEventListener("wheel", onWheel, { passive: false });
         window.addEventListener("keydown", onKey, { passive: false });
         window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("hashchange", settle);
 
         return () => {
           window.clearTimeout(settleId);
+          window.clearTimeout(releaseTimer);
           unregister();
           window.removeEventListener("wheel", onWheel);
           window.removeEventListener("keydown", onKey);
           window.removeEventListener("scroll", onScroll);
-          window.removeEventListener("hashchange", settle);
           releaseHold();
           moveTween?.kill();
           endingTl.kill();

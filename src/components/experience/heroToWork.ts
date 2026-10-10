@@ -45,9 +45,9 @@ const TORSO_Y = 0.73;
 /** Usable fabric around that origin, same units. */
 const FABRIC_W = 0.62;
 const FABRIC_H = 0.24;
-/** Past this the upscale starts to show. Measured against the 1300px source. */
+/** Cap the dolly before the cream wash takes over. */
 const MAX_ZOOM = 9.5;
-const PERSON_AR = 1300 / 2984;
+const PERSON_AR = 828 / 1900;
 
 /* Forward beats (seconds). */
 const F_ZOOM_AT = 0.12;

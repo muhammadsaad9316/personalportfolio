@@ -23,7 +23,7 @@ export const CODE_LINES: CodeLine[] = [
     tokens: [
       { t: "const", k: "kw" },
       { t: " " },
-      { t: "saad", k: "var" },
+      { t: "abdullah", k: "var" },
       { t: " = {", k: "punc" },
     ],
   },
@@ -81,7 +81,7 @@ export const CODE_LINES: CodeLine[] = [
     tokens: [
       { t: "createImpact", k: "fn" },
       { t: "(", k: "punc" },
-      { t: "saad", k: "var" },
+      { t: "abdullah", k: "var" },
       { t: ")", k: "punc" },
     ],
   },

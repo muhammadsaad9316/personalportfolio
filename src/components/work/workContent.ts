@@ -41,7 +41,7 @@ export const PROJECTS: Project[] = [
     kind: "Management System",
     summary:
       "One connected system replacing separate manual workflows for bookings, payments, expenses and dispatch.",
-    href: "/work/salam-cargo-erp",
+    href: "/#case-studies",
     placement: "topLeft",
     preview: "dashboard",
     flagship: true,

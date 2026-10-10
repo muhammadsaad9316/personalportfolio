@@ -23,7 +23,6 @@ export default function ProjectPreview({ project }: { project: Project }) {
         // Dense UI screenshots: 75 leaves visible mush on small type once the
         // flagship frame is scaled up into the case study.
         quality={88}
-        priority={project.flagship}
         data-flight-media={project.flagship ? "" : undefined}
       />
     );

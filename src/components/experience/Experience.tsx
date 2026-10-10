@@ -9,6 +9,7 @@ import Contact from "@/components/contact/Contact";
 import { useHeroToWork } from "./heroToWork";
 import { useWorkToCases } from "./workToCases";
 import { useClosingTransitions } from "./closingTransitions";
+import { useStageNavigation } from "./stageNavigation";
 import styles from "./Experience.module.css";
 
 /**
@@ -51,9 +52,10 @@ export default function Experience() {
   });
   useWorkToCases({ rootRef, stageRef, stickyRef, work });
   useClosingTransitions({ rootRef, stageRef, stickyRef });
+  useStageNavigation();
 
   return (
-    <div ref={rootRef} className={styles.experience}>
+    <div ref={rootRef} className={styles.experience} data-experience-root>
       <div ref={sceneRef} className={styles.heroScene}>
         <div ref={heroInnerRef} className={styles.heroInner}>
           <Hero ref={hero} />

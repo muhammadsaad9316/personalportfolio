@@ -10,7 +10,14 @@ import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 
-gsap.registerPlugin(useGSAP, ScrollTrigger, MotionPathPlugin, SplitText);
+gsap.registerPlugin(useGSAP);
+
+let desktopRegistered = false;
+export function registerDesktopPlugins() {
+  if (desktopRegistered) return;
+  gsap.registerPlugin(ScrollTrigger, MotionPathPlugin, SplitText);
+  desktopRegistered = true;
+}
 
 // Defaults shared by every section timeline.
 gsap.defaults({ ease: "power3.out", duration: 0.8 });

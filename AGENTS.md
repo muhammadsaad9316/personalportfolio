@@ -2,6 +2,7 @@
 
 ## Source of truth
 
+- Read `.prd` first for the current user requirements, completed edits, verification evidence, and work still in progress. Update its handoff and edit ledger when a task changes this project.
 - Read `doc/moresimple.md` before changing the experience, layout, copy, or animation direction.
 - Read `doc/MOTION_ARCHITECTURE.md` before changing animation code, libraries, section ownership, or transitions. Its ownership table is mandatory.
 - Read `doc/WORK_TO_CASES.md` before touching the Work section, the Case Studies section, the shared stage, or the Salam Cargo visual. It records how the built transition works, the numbers it runs on, and what is verified.

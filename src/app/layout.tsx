@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
-import SmoothScroll from "@/components/SmoothScroll";
 import "./globals.css";
+import { siteMetadata } from "@/lib/siteMetadata";
 
 const instrument = Instrument_Serif({
   subsets: ["latin"],
@@ -19,14 +19,13 @@ const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
 });
 
-export const metadata: Metadata = {
-  title: "Saad — Designer × Developer",
-  description:
-    "I turn ideas into intuitive interfaces and powerful products that make an impact.",
-};
+export const metadata: Metadata = siteMetadata(
+  "Abdullah — Designer × Developer",
+  "I turn ideas into intuitive interfaces and powerful products that make an impact.",
+);
 
 export const viewport: Viewport = {
-  themeColor: "#f6f3f1",
+  themeColor: "#fcf9f4",
 };
 
 export default function RootLayout({
@@ -35,7 +34,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${instrument.variable} ${bricolage.variable}`}>
       <body>
-        <SmoothScroll />
         <a className="skipLink" href="#main">
           Skip to content
         </a>

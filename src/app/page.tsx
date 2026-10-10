@@ -1,5 +1,6 @@
 import Experience from "@/components/experience/Experience";
 import SiteFooter from "@/components/footer/SiteFooter";
+import SmoothScroll from "@/components/SmoothScroll";
 
 /**
  * Experience owns the cinematic story through Contact. The footer is the first
@@ -7,9 +8,12 @@ import SiteFooter from "@/components/footer/SiteFooter";
  */
 export default function Page() {
   return (
-    <main id="main">
-      <Experience />
+    <>
+      <SmoothScroll />
+      <main id="main">
+        <Experience />
+      </main>
       <SiteFooter />
-    </main>
+    </>
   );
 }

@@ -2,6 +2,16 @@
    transform/opacity on [data-case-chapter], the clip-path mask on
    [data-case-visual], and the scale on the image inside it. */
 
+.enlarge {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 16px;
+  font-size: .875rem;
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+
 .cases {
   position: relative;
   z-index: 1;
@@ -63,7 +73,7 @@
   inset: 0;
   display: flex;
   align-items: center;
-  padding: clamp(48px, 5.6vw, 96px);
+  padding: clamp(32px, 5.5vh, 76px) clamp(28px, 4.3vw, 80px);
   will-change: transform, opacity;
 }
 
@@ -77,9 +87,9 @@
   align-items: center;
   gap: 0.7em;
   font-family: var(--font-mono);
-  font-size: clamp(0.67rem, 0.76vw, 0.78rem);
+  font-size: clamp(0.72rem, 0.78vw, 0.8rem);
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--accent);
 }
@@ -121,48 +131,45 @@
 }
 
 .intro .chapterTitle {
-  margin-top: 0;
-  max-width: none;
-  font-size: clamp(3rem, 3.65vw, 4.25rem);
-  line-height: 0.94;
-  white-space: nowrap;
+  max-width: 10ch;
+  font-size: clamp(2.5rem, 4.45vw, 5rem);
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
 .chapterBody {
   margin-top: clamp(22px, 3.4vh, 36px);
   max-width: 40ch;
   font-family: var(--font-serif);
-  font-size: clamp(1.1rem, 1.22vw, 1.3rem);
+  font-size: clamp(1.2rem, 1.4vw, 1.4rem);
   font-weight: 400;
   line-height: 1.48;
   letter-spacing: -0.015em;
   color: var(--text-muted);
+  text-wrap: pretty;
 }
 
 .proof {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
   margin-top: clamp(24px, 4vh, 42px);
 }
 
 .proof li {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: clamp(0.63rem, 0.7vw, 0.72rem);
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
+  font-size: clamp(0.72rem, 0.78vw, 0.8rem);
+  line-height: 1.4;
+  letter-spacing: 0.015em;
+  color: var(--text);
 }
 
 .proof li::before {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  flex: 0 0 4px;
+  height: 4px;
   background: var(--accent);
   content: "";
 }
@@ -175,7 +182,7 @@
 
 @media (min-width: 900px) and (hover: hover) and (pointer: fine) and
   (prefers-reduced-motion: no-preference) {
-  .chapter:not(:first-child) {
+  :global([data-cinematic]) .chapter:not(:first-child) {
     opacity: 0;
   }
 
@@ -188,89 +195,82 @@
      `translateY(100%)` guard plus a `yPercent: 100` arming once parked these
      slides two viewports down, permanently invisible. Opacity is the only
      guard that cannot collide with what GSAP owns. */
-  .visualSlide:not(:first-child) {
+  :global([data-cinematic]) .visualSlide:not(:first-child) {
     opacity: 0;
   }
 }
 
 /* Touch, narrow windows, and reduced motion use a normal document-flow story:
    no sticky chapter overlap and no prolonged scroll choreography. */
-@media (max-width: 899px), (prefers-reduced-motion: reduce), (hover: none),
-  (pointer: coarse) {
-  .cases {
-    min-height: 0;
-    padding: clamp(72px, 10vh, 120px) var(--gutter);
-  }
 
-  .panel {
-    display: block;
-    width: 100%;
-    max-width: var(--shell);
-    height: auto;
-    margin-inline: auto;
-    overflow: visible;
-  }
-
-  .visual {
-    display: none;
-  }
-
-  .chapters {
-    display: grid;
-    gap: clamp(68px, 11vh, 120px);
-    height: auto;
-    border-left: 0;
-  }
-
-  .chapter {
-    position: relative;
-    inset: auto;
-    display: block;
-    padding: 0;
-    visibility: visible;
-    opacity: 1;
-    transform: none;
-    will-change: auto;
-  }
-
-  .chapterInner {
-    max-width: 46rem;
-  }
-
-  .chapterTitle,
-  .intro .chapterTitle {
-    max-width: 15ch;
-    font-size: clamp(2.45rem, 9vw, 4.8rem);
-    line-height: 0.98;
-    white-space: normal;
-  }
-
-  .chapterBody {
-    max-width: 48ch;
-  }
-
-  .mobileVisual {
-    display: block;
-    overflow: hidden;
-    margin-top: clamp(30px, 6vh, 52px);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: #eef1f6;
-    box-shadow: 0 24px 60px -42px rgba(20, 18, 14, 0.35);
-  }
-
-  .mobileVisual img {
-    width: 100%;
-    height: auto;
-  }
+:global(:where([data-experience-root]:not([data-cinematic]))) .cases {
+  min-height: 0;
+  padding: clamp(72px, 10vh, 120px) var(--gutter);
 }
 
-@media (max-width: 520px) {
-  .proof {
-    display: grid;
-  }
+:global(:where([data-experience-root]:not([data-cinematic]))) .panel {
+  display: block;
+  width: 100%;
+  max-width: var(--shell);
+  height: auto;
+  margin-inline: auto;
+  overflow: visible;
+}
 
-  .proof li {
-    width: max-content;
-  }
+:global(:where([data-experience-root]:not([data-cinematic]))) .visual {
+  display: none;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .chapters {
+  display: grid;
+  gap: clamp(68px, 11vh, 120px);
+  height: auto;
+  border-left: 0;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .chapter {
+  position: relative;
+  inset: auto;
+  display: block;
+  padding: 0;
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .chapterInner {
+  max-width: 46rem;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .chapterTitle,
+  :global(:where([data-experience-root]:not([data-cinematic]))) .intro .chapterTitle {
+  max-width: 15ch;
+  font-size: clamp(2.45rem, 9vw, 4.8rem);
+  line-height: 0.98;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .chapterBody {
+  max-width: 48ch;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .proof {
+  max-width: 30rem;
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .mobileVisual {
+  display: block;
+  overflow: hidden;
+  margin-top: clamp(30px, 6vh, 52px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #eef1f6;
+  box-shadow: 0 24px 60px -42px rgba(20, 18, 14, 0.35);
+}
+
+:global(:where([data-experience-root]:not([data-cinematic]))) .mobileVisual img {
+  width: 100%;
+  height: auto;
 }

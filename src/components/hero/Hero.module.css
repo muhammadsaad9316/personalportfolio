@@ -78,11 +78,11 @@
   left: 50%;
   right: 0;
   background-image:
-    linear-gradient(rgba(166, 206, 89, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(166, 206, 89, 0.07) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--accent-bright) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-bright) 7%, transparent) 1px, transparent 1px),
     radial-gradient(
       52% 46% at 74% 46%,
-      rgba(116, 152, 44, 0.22),
+      color-mix(in srgb, var(--accent) 22%, transparent),
       transparent 72%
     );
   background-size:
@@ -117,6 +117,9 @@
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: clamp(1.45rem, 1.85vw, 1.85rem);
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -137,8 +140,10 @@
 
 .navLink {
   position: relative;
-  display: inline-block;
-  padding-bottom: 7px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
   font-size: clamp(0.82rem, 0.95vw, 0.95rem);
   font-weight: 500;
   color: var(--text);
@@ -167,10 +172,11 @@
   align-items: center;
   gap: 9px;
   margin-left: auto;
+  min-height: 44px;
   padding: clamp(11px, 1.3vw, 15px) clamp(16px, 1.6vw, 24px);
   border: 1px solid rgba(255, 255, 255, 0.26);
-  border-radius: 8px;
-  color: #f2f0ec;
+  border-radius: var(--radius-sm);
+  color: var(--text-invert);
   font-size: clamp(0.82rem, 0.95vw, 0.95rem);
   font-weight: 500;
   transition:
@@ -232,6 +238,7 @@
   display: flex;
   align-items: center;
   gap: 0.5em;
+  font-family: var(--font-mono);
   font-size: clamp(0.68rem, 0.78vw, 0.8rem);
   font-weight: 600;
   letter-spacing: 0.17em;
@@ -244,13 +251,14 @@
   font-size: clamp(2rem, 3.42vw, 3.5rem);
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.038em;
+  letter-spacing: -0.035em;
 }
 
 .lineMask {
   display: block;
   overflow: hidden;
-  padding-bottom: 0.045em;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.075em;
 }
 
 .line {
@@ -273,7 +281,7 @@
   margin-top: clamp(18px, 2.8vh, 36px);
   max-width: 32ch;
   font-family: var(--font-serif);
-  font-size: clamp(1.08rem, 1.28vw, 1.3rem);
+  font-size: clamp(1.2rem, 1.45vw, 1.45rem);
   font-weight: 400;
   line-height: 1.43;
   letter-spacing: -0.018em;
@@ -289,7 +297,8 @@
   align-items: center;
   gap: 10px;
   padding: clamp(13px, 1.6vw, 18px) clamp(20px, 2vw, 28px);
-  border-radius: 8px;
+  min-height: 48px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
   font-size: clamp(0.88rem, 1vw, 1rem);
@@ -315,8 +324,8 @@
   position: absolute;
   left: 26.5%;
   top: 8%;
-  /* Above the figure: these cards read as artefacts held in front of him. */
-  z-index: 5;
+  /* The portrait stays in front when pointer motion brings a card across it. */
+  z-index: 3;
   width: clamp(150px, 15%, 232px);
 }
 
@@ -517,14 +526,16 @@
 
 .codeLine {
   display: block;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   min-height: 1.1em;
 }
 
 .lineNo {
   display: inline-block;
   width: 2.7em;
-  color: #57574f;
+  color: #92968a;
+  font-variant-numeric: tabular-nums;
   user-select: none;
 }
 
@@ -559,7 +570,7 @@
 }
 
 .tPunc {
-  color: #7d7d76;
+  color: #a5a99c;
 }
 
 .caret {
@@ -614,24 +625,23 @@
     hue-rotate(172deg);
 }
 
-/* ------------------------------------------------- GSAP from-states (SSR) */
+/* ------------------------------------------------- Entrance opacity guard */
 
-@media (prefers-reduced-motion: no-preference) {
-  .darkPanel {
-    transform: translateX(100%);
-  }
-
-  .personReveal {
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hero[data-hero-ready] .personReveal {
     opacity: 0;
   }
 
-  .line {
-    transform: translateY(118%);
-  }
-
-  .hero [data-reveal],
-  .hero [data-term] {
+  .hero[data-hero-ready] [data-reveal],
+  .hero[data-hero-ready] [data-term] {
     opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink::after,
+  .ctaArrow {
+    transition: none;
   }
 }
 
@@ -679,7 +689,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   .hero {
     min-height: auto;
   }
@@ -751,8 +761,8 @@
     margin-left: 0;
     --person-width: min(66%, 290px);
     width: var(--person-width);
-    height: auto;
-    aspect-ratio: 1300 / 2984;
+    height: clamp(340px, 88vw, 440px);
+    overflow: hidden;
     margin: clamp(18px, 4vh, 34px) auto 0;
   }
 
@@ -760,12 +770,26 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    margin-top: clamp(-6px, -1vh, 0px);
+    margin-top: 0;
+    padding-top: 24px;
+    border-top: 1px solid var(--line-dark);
+    max-height: 185px;
+    overflow: hidden;
   }
 
   .codeCluster > .layer {
     position: static;
     width: 100%;
+  }
+
+  .personImg {
+    height: auto;
+    object-position: top center;
+  }
+
+  .code {
+    font-size: clamp(0.625rem, 2.65vw, 0.85rem);
+    line-height: 2;
   }
 }
 
@@ -820,7 +844,7 @@
 }
 
 .devSignals path {
-  stroke: rgba(166, 206, 89, 0.34);
+  stroke: color-mix(in srgb, var(--accent-bright) 34%, transparent);
 }
 
 /* Light travelling down the split seam. */
@@ -834,7 +858,7 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    rgba(166, 206, 89, 0.75),
+    color-mix(in srgb, var(--accent-bright) 75%, transparent),
     transparent
   );
 }
@@ -890,7 +914,7 @@
   pointer-events: none;
   background: radial-gradient(
     38% 60% at 50% 50%,
-    rgba(116, 152, 44, 0.5),
+    color-mix(in srgb, var(--accent) 50%, transparent),
     transparent 70%
   );
 }

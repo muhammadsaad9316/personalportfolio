@@ -4,42 +4,42 @@
 
 :root {
   /* Surfaces */
-  --cream: #f6f3f1;
-  --cream-2: #efebe7;
+  --cream: var(--work-cream);
+  --cream-2: #eeece5;
   /* Work background AND the expanding torso mask read this one token.
      They must stay identical or the Hero -> Work handoff shows a seam. */
   --work-cream: #fcf9f4;
-  --card: #fbf9f7;
-  --ink: #0f0f0e;
-  --ink-2: #161716;
-  --ink-3: #1f1f1f;
+  --card: #fffdfa;
+  --ink: #181b16;
+  --ink-2: #23261f;
+  --ink-3: #30342a;
 
   /* Text */
-  --text: #12120f;
-  --text-muted: #6e6b66;
-  --text-invert: #f4f3f1;
-  --text-invert-muted: #8d8d88;
+  --text: #252620;
+  --text-muted: #6b6a5f;
+  --text-invert: #f5f2e9;
+  --text-invert-muted: #b8bcae;
 
   /* Accent */
-  --accent: #74982c;
-  --accent-hover: #648427;
-  --accent-bright: #a6ce59;
+  --accent: #596c36;
+  --accent-hover: #46552a;
+  --accent-bright: #b9c99a;
 
-  /* Closing sequence: berry rose, mineral lilac and deep plum keep the
-     existing olive complementary while ending the cream story decisively. */
-  --ending-rose: #7f344f;
-  --ending-rose-muted: #d8c3ce;
-  --closing-dark: #211527;
-  --closing-dark-deep: #18101d;
-  --closing-light: #dcd3e2;
-  --closing-text: #f4eef6;
-  --closing-muted: #b9acbd;
-  --closing-light-muted: #5e5163;
-  --closing-accent: #4a631b;
+  /* One palette throughout: warm light surfaces, charcoal and olive.
+     Closing sections change tonal depth rather than introducing new hues. */
+  --ending-surface: var(--ink-2);
+  --ending-muted: var(--text-invert-muted);
+  --closing-dark: var(--text);
+  --closing-dark-deep: var(--ink);
+  --closing-light: var(--cream-2);
+  --closing-text: var(--text-invert);
+  --closing-muted: var(--text-invert-muted);
+  --closing-light-muted: var(--text-muted);
+  --closing-accent: var(--accent);
 
   /* Lines */
-  --line: #e3ded8;
-  --line-dark: #262626;
+  --line: #e0ddd3;
+  --line-dark: #393e32;
 
   /* Rhythm */
   --radius-sm: 6px;
@@ -68,6 +68,7 @@ body {
 
 html {
   -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--text-muted) var(--cream);
 }
 
 body {
@@ -105,6 +106,11 @@ button {
   color: inherit;
 }
 
+::selection {
+  background: var(--accent);
+  color: var(--card);
+}
+
 img,
 svg {
   display: block;
@@ -118,6 +124,9 @@ svg {
 }
 
 .skipLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   position: absolute;
   left: 12px;
   top: -60px;

@@ -2,16 +2,17 @@
  * Where the closing sections point.
  *
  * ────────────────────────────────────────────────────────────────────────
- *  TODO(Saad): these are PLACEHOLDERS. Replace all four before publishing.
+ *  Set the variables listed in .env.example in .env.local or hosting settings.
+ *  The fallback values remain PLACEHOLDERS until real details are supplied.
  *  They are deliberately obvious rather than plausible, so a forgotten one
  *  fails loudly in review instead of quietly shipping a dead link.
  * ────────────────────────────────────────────────────────────────────────
  */
-export const CONTACT_EMAIL = "your-email@example.com";
+export const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "your-email@example.com";
 
 export const SOCIAL_LINKS = [
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/your-handle" },
-  { label: "GitHub", href: "https://github.com/your-handle" },
+  { label: "LinkedIn", href: process.env.NEXT_PUBLIC_LINKEDIN_URL || "https://www.linkedin.com/in/your-handle" },
+  { label: "GitHub", href: process.env.NEXT_PUBLIC_GITHUB_URL || "https://github.com/your-handle" },
   { label: "Email", href: `mailto:${CONTACT_EMAIL}` },
 ] as const;
 

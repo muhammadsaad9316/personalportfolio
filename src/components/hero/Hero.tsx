@@ -1,7 +1,9 @@
 "use client";
 
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { forwardRef, useImperativeHandle, useRef } from "react";
+import { navigateToStage } from "@/components/experience/stageNavigation";
+import { NAV_LINKS } from "@/components/contact/siteLinks";
 import { gsap, useGSAP } from "@/lib/gsap";
 import HeroCopy from "./HeroCopy";
 import DesignCluster from "./DesignCluster";
@@ -19,20 +21,39 @@ import {
 } from "./heroAmbient";
 import styles from "./Hero.module.css";
 
-const PERSON_SRC = "/media/hero-person.webp";
+const PERSON_SRC = "/media/hero-saad.webp";
 /* The Hero -> Work transition magnifies this figure several times over, so
    desktop must download the full-resolution file even though it is laid out
    small. Touch never runs the transition and keeps a sensible variant. */
-const PERSON_SIZES = "(max-width: 899px) 66vw, 1300px";
-const PERSON_W = 1300;
-const PERSON_H = 2984;
+const PERSON_SIZES = "(max-width: 899px) 66vw, 828px";
+const PERSON_W = 828;
+const PERSON_H = 1900;
+const DESKTOP = "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const NATIVE = "(max-width: 899px), (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)";
+const portraitProps = (alt: string) => getImageProps({
+  src: PERSON_SRC, alt, width: PERSON_W, height: PERSON_H,
+  className: styles.personImg, quality: 88, sizes: PERSON_SIZES, loading: "eager",
+}).props;
+const mobilePortrait = getImageProps({
+  src: PERSON_SRC, alt: "", width: PERSON_W, height: PERSON_H,
+  quality: 75, sizes: "(max-width: 480px) 59.4vw, 350px",
+}).props;
 
-const NAV = [
-  { label: "Work", href: "#work", current: true },
-  { label: "About", href: "#about", current: false },
-  { label: "Skills", href: "#skills", current: false },
-  { label: "Notes", href: "#notes", current: false },
-];
+function Portrait({ decorative = false }: { decorative?: boolean }) {
+  const props = portraitProps(decorative ? "" : "Abdullah, designer and developer, standing with arms crossed");
+  return (
+    <>
+      {!decorative && <>
+        <link rel="preload" as="image" media={DESKTOP} imageSrcSet={props.srcSet} imageSizes={props.sizes} fetchPriority="high" />
+        <link rel="preload" as="image" media={NATIVE} imageSrcSet={mobilePortrait.srcSet} imageSizes={mobilePortrait.sizes} fetchPriority="high" />
+      </>}
+      <picture>
+        <source media={NATIVE} srcSet={mobilePortrait.srcSet} sizes={mobilePortrait.sizes} />
+        <img {...props} fetchPriority={decorative ? "auto" : "high"} />
+      </picture>
+    </>
+  );
+}
 
 /** Circuit traces behind the developer side. */
 const SIGNALS = [
@@ -59,13 +80,17 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
   const glowRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const ambientRef = useRef<gsap.core.Animation[]>([]);
+  const ambientRequested = useRef(true);
+  const visibleRef = useRef(true);
+  const syncAmbient = () => {
+    const active = ambientRequested.current && visibleRef.current && !document.hidden;
+    for (const item of ambientRef.current) active ? item.resume() : item.pause();
+  };
 
   useImperativeHandle(ref, () => ({
     setAmbient: (active: boolean) => {
-      for (const item of ambientRef.current) {
-        if (active) item.resume();
-        else item.pause();
-      }
+      ambientRequested.current = active;
+      syncAmbient();
     },
   }));
 
@@ -100,10 +125,10 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
       /* ---------------------------------------------------------------
        * Entrance choreography — one local timeline, no ScrollTrigger.
        * ------------------------------------------------------------- */
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        // CSS supplies the first-paint from-state as a percentage transform.
-        // GSAP reads that back as pixels, so zero x/y here or the percent
-        // tween would finish on top of a leftover pixel offset.
+      const desktop = DESKTOP;
+      mm.add(desktop, () => {
+        root.dataset.heroReady = "true";
+        // GSAP owns entrance transforms; CSS only guards initial opacity.
         gsap.set(darkPanelRef.current, { x: 0, xPercent: 100 });
         gsap.set(q("[data-line]"), { y: 0, yPercent: 118 });
         gsap.set(q("[data-reveal='nav']"), { y: -14, autoAlpha: 0 });
@@ -156,6 +181,11 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
             "artefacts",
           );
 
+        return () => { delete root.dataset.heroReady; };
+      });
+
+      mm.add({ desktop, designer: "(min-width: 1025px)" }, (context) => {
+        if (!context.conditions?.desktop) return;
         /* -------------------------------------------------------------
          * Ambient systems. The composition keeps working after the
          * entrance lands: the code writes itself, the dashboard
@@ -165,18 +195,16 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
         const ambient: gsap.core.Animation[] = [];
         ambientRef.current = ambient;
 
-        gsap.delayedCall(1.15, () => {
-          ambient.push(
+        ambient.push(
             ...codeTypingLoop(
               Array.from(root.querySelectorAll<HTMLElement>("[data-token]")),
               caret,
               Array.from(root.querySelectorAll<HTMLElement>("[data-gutter]")),
             ),
             ...caretBlink(caret),
-          );
-        });
+        );
 
-        ambient.push(
+        if (context.conditions.designer) ambient.push(
           ...chartLoop(
             root.querySelector<SVGPathElement>("[data-chart]"),
             root.querySelector<SVGCircleElement>("[data-chart-marker]"),
@@ -189,29 +217,40 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
             root.querySelector<HTMLElement>("[data-swatch-ring]"),
             Array.from(root.querySelectorAll<HTMLElement>("[data-swatch]")),
           ),
+          ...dotSweepLoop(root.querySelector<HTMLElement>("[data-dot-sweep]")),
+        );
+        ambient.push(
           ...signalLoop(
             Array.from(root.querySelectorAll<SVGPathElement>("[data-signal]")),
           ),
-          ...dotSweepLoop(root.querySelector<HTMLElement>("[data-dot-sweep]")),
           ...seamLoop(root.querySelector<HTMLElement>("[data-seam]")),
           ...pulseLoop(
             Array.from(root.querySelectorAll<HTMLElement>("[data-live-dot]")),
           ),
         );
+        syncAmbient();
+        return () => { ambientRef.current = []; };
       });
+
+      const intersection = new IntersectionObserver(([entry]) => {
+        visibleRef.current = entry.intersectionRatio > 0;
+        syncAmbient();
+      });
+      intersection.observe(root);
+      document.addEventListener("visibilitychange", syncAmbient);
 
       /* ---------------------------------------------------------------
        * Designer <-> Developer transformation.
        * Fine pointer only. Pointer values never enter React state.
        * ------------------------------------------------------------- */
       mm.add(
-        "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
+        desktop,
         () => {
           const D = 0.75; // the brief asks for a 0.5–0.8s transformation
           const ease = "power3.out";
           const clamp01 = gsap.utils.clamp(0, 1);
 
-          const parts = layers.map((el) => ({
+          const parts = layers.filter(el => !el.closest(`.${styles.designCluster}`) || window.matchMedia("(min-width: 1025px)").matches).map((el) => ({
             depth: Number(el.dataset.depth) || 1,
             quiet: Number(el.dataset.quiet ?? "0.55"),
             isCode: el.dataset.side === "code",
@@ -247,7 +286,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
           let dirty = false;
 
           const apply = () => {
-            if (!dirty) return;
+            if (!dirty || !visibleRef.current || !ambientRequested.current || document.hidden) return;
             dirty = false;
 
             // -1 = full Designer, 0 = balanced, +1 = full Developer.
@@ -306,7 +345,11 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
         },
       );
 
-      return () => mm.revert();
+      return () => {
+        intersection.disconnect();
+        document.removeEventListener("visibilitychange", syncAmbient);
+        mm.revert();
+      };
     },
     { scope: rootRef },
   );
@@ -356,17 +399,19 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
       <div className={styles.inner}>
         <header className={styles.header} data-hero-fade data-exit="up">
           <a className={styles.logo} href="#main" data-reveal="nav">
-            Saad<span className={styles.logoDot}>.</span>
+            Abdullah<span className={styles.logoDot}>.</span>
           </a>
 
           <nav className={styles.nav} aria-label="Primary">
             <ul className={styles.navList}>
-              {NAV.map((item) => (
+              {NAV_LINKS.map((item) => (
                 <li key={item.label} data-reveal="nav">
                   <a
-                    className={`${styles.navLink} ${item.current ? styles.navLinkCurrent : ""}`}
+                    className={styles.navLink}
                     href={item.href}
-                    aria-current={item.current ? "true" : undefined}
+                    onClick={(event) => {
+                      if (navigateToStage(item.beat)) event.preventDefault();
+                    }}
                   >
                     {item.label}
                   </a>
@@ -375,7 +420,14 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
             </ul>
           </nav>
 
-          <a className={styles.connect} href="#contact" data-reveal="nav">
+          <a
+            className={styles.connect}
+            href="#contact"
+            data-reveal="nav"
+            onClick={(event) => {
+              if (navigateToStage("contact")) event.preventDefault();
+            }}
+          >
             Let&apos;s Connect
             <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
               <path
@@ -396,31 +448,13 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
               parallax, no entrance travel. Only its lighting changes. */}
           <div className={styles.person} data-hero-person>
             <div ref={personRevealRef} className={styles.personReveal}>
-              <Image
-                className={styles.personImg}
-                src={PERSON_SRC}
-                alt="Saad, designer and developer, standing with arms crossed"
-                width={PERSON_W}
-                height={PERSON_H}
-                priority
-                quality={88}
-                sizes={PERSON_SIZES}
-              />
+              <Portrait />
               <div
                 ref={personDarkRef}
                 className={styles.personDark}
                 aria-hidden="true"
               >
-                <Image
-                  className={styles.personImg}
-                  src={PERSON_SRC}
-                  alt=""
-                  width={PERSON_W}
-                  height={PERSON_H}
-                  priority
-                  quality={88}
-                  sizes={PERSON_SIZES}
-                />
+                <Portrait decorative />
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { getImageProps } from "next/image";
 import { useRef } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { getLenis } from "@/components/SmoothScroll";
@@ -19,6 +19,30 @@ import styles from "./Cases.module.css";
 
 const CINEMATIC =
   "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const NATIVE = "(max-width: 899px), (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)";
+const EMPTY_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E";
+
+function StudyImage({ index, gallery = false }: { index: number; gallery?: boolean }) {
+  const image = FLAGSHIP_CHAPTERS[index].image;
+  const { props } = getImageProps({
+    src: image.src,
+    alt: gallery ? "" : image.alt,
+    width: image.width,
+    height: image.height,
+    quality: 88,
+    sizes: "(max-width: 899px) 92vw, 140vh",
+    className: gallery ? styles.visualImage : undefined,
+    loading: gallery ? "eager" : "lazy",
+    style: gallery ? { objectPosition: image.position } : undefined,
+  });
+  return (
+    <picture>
+      <source media={gallery ? CINEMATIC : NATIVE} srcSet={props.srcSet} sizes={props.sizes} />
+      {/* The inactive composition has no network image, including before hydration. */}
+      <img {...props} srcSet={gallery ? undefined : props.srcSet} src={gallery ? EMPTY_IMAGE : props.src} />
+    </picture>
+  );
+}
 
 /** This section's name in the shared gesture lock. */
 const ID = "case-featured";
@@ -129,7 +153,7 @@ export default function CaseStudies() {
         gsap.set(visuals[0], { clipPath: MASK_OPEN });
         /* The article is a gate now, not a mover: the parts inside it carry
            the entrance, so this only decides whether a chapter is on screen.
-           Plain `opacity` and not `autoAlpha`, because all five chapters
+           Plain `opacity` and not `autoAlpha`, because all three chapters
            stay in the accessibility tree in document order. */
         gsap.set(chapters, { opacity: 0, y: 0 });
         gsap.set(chapters[0], { opacity: 1 });
@@ -493,34 +517,7 @@ export default function CaseStudies() {
               className={styles.visualSlide}
               data-case-visual={chapter.id}
             >
-              <Image
-                className={styles.visualImage}
-                src={chapter.image.src}
-                alt=""
-                width={chapter.image.width}
-                height={chapter.image.height}
-                /* The box is 58vw wide and a full viewport tall, so a
-                   2800 x 2640 image covering it is painted about
-                   `100vh * 2800/2640` wide — more than its own column, which
-                   is what the old `60vw` missed by a third and why these read
-                   as soft. Stating it in `vh` stays correct as the viewport
-                   changes shape; 140 also covers wide, short screens where the
-                   58vw column wins instead. */
-                sizes="(max-width: 899px) 92vw, 140vh"
-                quality={88}
-                priority={index === 0}
-                /* Eager, because the fold parks these a full viewport below
-                   the frame and lazy loading measures the TRANSFORMED box —
-                   Chrome quite correctly decides they are off-screen and never
-                   starts the fetch, so stepping to a chapter showed an empty
-                   panel. The old crossfade never hit this: it left every slide
-                   at `inset: 0` and only changed opacity.
-
-                   Only the first is `priority`; the rest load with the page but
-                   without a preload hint, so they do not compete with it. */
-                loading={index === 0 ? undefined : "eager"}
-                style={{ objectPosition: chapter.image.position }}
-              />
+              <StudyImage index={index} gallery />
             </div>
           ))}
         </div>
@@ -566,14 +563,11 @@ export default function CaseStudies() {
               </div>
 
               <figure className={styles.mobileVisual}>
-                <Image
-                  src={chapter.image.src}
-                  alt={chapter.image.alt}
-                  width={chapter.image.width}
-                  height={chapter.image.height}
-                  sizes="(max-width: 899px) 92vw, 80vw"
-                  priority={index === 0}
-                />
+                <a href={chapter.image.src} target="_blank" rel="noopener noreferrer"
+                  aria-label={`View full screenshot ↗: ${chapter.image.alt} (opens in a new tab)`}>
+                  <StudyImage index={index} />
+                  <span className={styles.enlarge}>View full screenshot ↗</span>
+                </a>
               </figure>
             </article>
           ))}

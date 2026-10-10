@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import Lenis from "lenis";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
+import type Lenis from "lenis";
+import type { gsap } from "@/lib/gsap";
+import { stageIsArmed, stageReleased } from "./experience/stageBeats";
 
 /**
  * The live Lenis instance, or null when smoothing is off (touch, narrow
@@ -26,39 +27,59 @@ export function getLenis() {
 export default function SmoothScroll() {
   useEffect(() => {
     const query = window.matchMedia(
-      "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
+      "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
     );
 
     let lenis: Lenis | null = null;
+    let animation: typeof gsap | null = null;
+    let loading = false;
+    let generation = 0;
 
     const tick = (time: number) => {
       lenis?.raf(time * 1000);
     };
 
-    const start = () => {
-      if (lenis) return;
-      lenis = new Lenis({
-        duration: 1.05,
-        smoothWheel: true,
-        syncTouch: false,
-        wheelMultiplier: 1,
-      });
-      lenis.on("scroll", ScrollTrigger.update);
-      current = lenis;
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
+    const start = async () => {
+      if (lenis || loading) return;
+      loading = true;
+      const request = ++generation;
+      try {
+        const [{ default: Lenis }, { gsap, ScrollTrigger }] = await Promise.all([
+          import("lenis"), import("@/lib/gsap"),
+        ]);
+        if (request !== generation || !query.matches) return;
+        animation = gsap;
+        lenis = new Lenis({
+          duration: 1.05,
+          smoothWheel: true,
+          syncTouch: false,
+          wheelMultiplier: 1,
+        });
+        lenis.on("scroll", ScrollTrigger.update);
+        current = lenis;
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+        if (stageIsArmed() && !stageReleased()) lenis.stop();
+      } finally {
+        if (request === generation) loading = false;
+      }
     };
 
     const stop = () => {
+      generation++;
+      loading = false;
       if (!lenis) return;
-      gsap.ticker.remove(tick);
-      gsap.ticker.lagSmoothing(500, 33);
+      animation?.ticker.remove(tick);
+      animation?.ticker.lagSmoothing(500, 33);
       lenis.destroy();
       lenis = null;
       current = null;
     };
 
-    const sync = () => (query.matches ? start() : stop());
+    const sync = () => {
+      if (query.matches) void start().catch(() => { /* Native scrolling remains available. */ });
+      else stop();
+    };
 
     sync();
     query.addEventListener("change", sync);

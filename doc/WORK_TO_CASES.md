@@ -8,6 +8,24 @@ Read `doc/moresimple.md` for what the move is supposed to feel like and
 approved behaviour was actually built, the numbers it runs on, and what was
 measured.
 
+### Three-slide update — 2026-10-09
+
+The flagship now has exactly three slides: intro → solution → result. Problem
+context is included in the intro and the approach in the solution. The stage
+uses `600svh`, with current rests listed in §3. The reveal and property owners
+are unchanged. §9 preserves earlier five-slide measurements as historical
+evidence; they are not current counts or geometry.
+
+Current verification: TypeScript and existing stage-navigation/visual checks
+pass. Chrome at 1440 × 900 confirms three slides, wheel forward/reverse rests
+1800/2700/3600, stage height 5400px and footer top/max scroll 6300px. Keyboard,
+reload/history, closing fragments and footer return pass. Live reduced motion
+removes the title splits and leaves three readable articles; touch emulation at
+390 × 844 shows all three in document flow without overflow. No runtime errors.
+A local development chapter sample has 96 intervals: median 16.7ms, p95 16.9ms,
+zero over 32ms. Physical-device performance and a fresh production build were
+not measured in this pass.
+
 ---
 
 ## 1. What it does
@@ -112,7 +130,7 @@ leaving the document.
 }
 
 @media (cinematic) {
-  .stage        { height: 800svh; }
+  .stage        { height: 600svh; }
   .stageSticky  { position: sticky; top: 0; height: 100svh;
                   overflow: hidden; display: grid;
                   grid-template-columns: 100%; grid-template-rows: 100%; }
@@ -144,20 +162,18 @@ At a 1440 × 900 viewport:
 | Work | 900 | Held until a gesture; timeline at progress 0 |
 | *(any move)* | unchanged | Plays in place. The scroll only jumps once the move has landed |
 | Case intro | 1800 | **Salam Cargo ERP**, its line of context and three facts |
-| The problem | 2700 | |
-| The approach | 3600 | |
-| The solution | 4500 | |
-| The result | 5400 | Closing timeline state `0/0` |
-| Ending | 6300 | Closing timeline state `1/0` |
-| Contact | 7200 | Closing timeline state `1/1`; final held beat |
-| Footer | 8100 (max scroll) | Sticky released; Lenis active |
+| The solution | 2700 | |
+| The result | 3600 | Closing timeline state `0/0` |
+| Ending | 4500 | Closing timeline state `1/0` |
+| Contact | 5400 | Closing timeline state `1/1`; final held beat |
+| Footer | 6300 (max scroll) | Sticky released; Lenis active |
 
-`800svh` = eight stage bands of one viewport each. Nothing scrubs across that range —
+`600svh` = six stage bands of one viewport each. Nothing scrubs across that range —
 every beat is stepped by gesture — so it exists only to give each beat a scroll
 position of its own, which keeps the scrollbar honest and lets a reload land
 back on the right chapter. `casesTop` is `stage.offsetTop + sticky.offsetHeight`
 and chapter *i* rests at `casesTop + i * sticky.offsetHeight`, so the last
-chapter lands at 5400; Ending and Contact add the final two rests before the
+chapter lands at 3600; Ending and Contact add the final two rests before the
 footer at max scroll.
 
 ### Stacking
@@ -301,10 +317,12 @@ layout border, so removing the card treatment cannot change the image geometry.
 
 ### Position and size measurement
 
-`offsetLeft`/`offsetTop` still provide the untransformed position inside the
-sticky container. Size uses the live bounding box divided by the currently
-applied scale, retaining sub-pixel dimensions when measuring mid-flight or
-after a resize.
+`offsetLeft`/`offsetTop` provide the untransformed position inside the sticky
+container. Size reads the computed CSS width and height, retaining sub-pixel
+dimensions while excluding both the frame's flight transform and its parent
+card's hover scale. The bounding-box approach included that parent scale and
+left an exposed image strip when leaving a hovered card. These layout dimensions
+are cached during measurement and reused for the image counter-scale each frame.
 
 ```ts
 function offsetWithin(el, root) {
@@ -506,7 +524,7 @@ frame remains owned by `work-to-cases`.
 `CaseStudies.tsx` owns one labelled, **paused** timeline. There is no
 ScrollTrigger: the chapters are stepped, not scroll-linked.
 
-- labels: `intro`, `problem`, `approach`, `solution`, `result`
+- labels: `intro`, `solution`, `result`
 - chapter *i* is settled at timeline position *i* exactly, and its transition
   occupies the unit before it. That regularity is what lets the stepper move
   the playhead a constant distance and get a constant-speed step every time
@@ -617,7 +635,7 @@ Three things about it are easy to get wrong:
 1. **Accessibility is handled, but only because `aria` defaults to `"auto"`.**
    That copies the heading's text onto its own `aria-label` and marks the
    generated pieces `aria-hidden`, so a screen reader still reads one sentence.
-   Verified: all four split headings carry the full sentence as `aria-label`.
+   Both later chapter headings carry the full sentence as `aria-label`.
 2. **Descenders.** At `line-height: 1.02` the clip edge lands almost on the
    baseline and shears the tails off g, y and p. `Cases.module.css` gives the
    mask `padding-bottom: 0.16em` to move the edge down and an equal negative
@@ -650,9 +668,12 @@ the only guard that cannot collide with what GSAP owns.
 
 ### The slides load eagerly
 
-Slides 1–4 carry `loading="eager"`. Only slide 0 is `priority` — the rest load
-with the page but without a preload hint, so they never compete with the one
-that is actually on screen.
+The desktop gallery retains eager loading for its three images, without initial
+priority hints. Each `<picture>` uses the cinematic media condition, so native
+touch/narrow/reduced-motion compositions do not fetch this hidden gallery. The
+gallery and shared Work preview use matching quality 88 variants. Normal-flow
+chapter figures lazy-load their active media source instead, and link to a full
+screenshot. This policy supersedes the earlier unconditional image priority.
 
 This was originally a hard requirement of the fold, and the reason is worth
 keeping because it will apply again to anything that parks an image outside the
@@ -661,9 +682,10 @@ frame: **lazy loading measures the transformed box.** A slide parked at
 stepping to that chapter showed a completely empty panel.
 
 The mask does not have that problem — every slide stays at `inset: 0`, so all
-five are in view as far as the loader is concerned and would load on their own.
-`eager` is kept anyway: it costs nothing and it is one less thing depending on
-how a clipped box is classified.
+three are in view as far as the loader is concerned and would load on their own.
+`eager` is kept for the active desktop composition to avoid depending on how a
+clipped box is classified. It does incur network transfer; media-gated sources
+prevent that transfer for the inactive mobile gallery.
 
 Being in view does **not** make them Largest Contentful Paint candidates. Until
 the flight lands, `[data-case-slot]` is `autoAlpha: 0`, and a `visibility:
@@ -672,13 +694,15 @@ portrait, and no case screenshot appears in the entry list.
 
 The chapter articles remain in accessible document order. Their inactive
 desktop states use opacity rather than visibility, while touch and reduced
-motion render all five as ordinary stacked articles.
+motion render all three as ordinary stacked articles.
 
 ---
 
-## 9. Verified
+## 9. Historical verification (five-slide version)
 
-Measured at 1440 × 900 unless noted.
+Measured at 1440 × 900 unless noted. The counts and scroll positions in this
+historical table predate the three-slide change of 2026-10-09; use §3 and the
+latest verification note below for current geometry.
 
 `scripts/gesture-check.js` is the one check kept for this: paste it into the
 DevTools console on a running dev server at a desktop viewport. It drives real
@@ -793,21 +817,26 @@ gesture that reaches their range, including the ones the gate has already
 counted as part of an earlier flick. Every landing stops it correctly now; this
 keeps the invariant true even if a future landing forgets.
 
-### What this does not cover
+### Arbitrary scroll recovery (implemented 2026-10-09)
 
-`lenis.stop()` only intercepts wheel and touch. A scrollbar drag, middle-click
-autoscroll, or a find-in-page jump can still move the document to a non-rest
-position, and from there the same soft-lock is reachable. Closing that needs a
-scroll-position watchdog, which is a scroll controller — deliberately not built.
+`lenis.stop()` intercepts wheel and touch but cannot prevent a scrollbar drag,
+middle-click autoscroll, browser restoration or find-in-page jump from moving the
+document. `stageNavigation.ts` now observes passive scroll events. Within the
+held stage, it waits 120ms after the last event, then uses the existing registered
+reset/move/settle sequence to select the nearest valid rest. Recovery waits while
+a handoff owns the page or intentional travel is active; it does not own any
+element animation or replace the gesture gates. Browser-restored differences of
+one pixel or more are also normalized. Production checks cover five between-rest
+positions and reverse keyboard travel after recovery.
 
 That last paragraph used to read *when ordinary page content finally lands*
 *below the last chapter, that chapter becomes the one place that must*
 *`start()` Lenis again.* It has landed. See §13.
 
-The scrollbar-drag hole is now partly closed as a consequence, because the
-one position it could strand the page in — below the story — is exactly the
-boundary §13 had to watch anyway. Dragging *within* the stage is still
-uncovered.
+The footer boundary still uses the §13 release/re-capture behavior. Recovery
+within the held stage is now covered as described above. Live changes between
+native and cinematic modes retain the current reading section, including the
+footer, instead of jumping back to Hero.
 
 ---
 
@@ -826,7 +855,7 @@ uncovered.
 | How far a title line waits below its mask | `LINE_RISE` (currently `120`) — must stay above 100 + the mask padding in `Cases.module.css` |
 | Descenders clipped on a title | the `padding-bottom` / `margin-bottom` pair on `.chapterTitle :global(.caseTitleLine-mask)`; move them together |
 | How readily a gesture counts | `BURST_GAP_MS` / `SETTLE_MS` in `handoff.ts` |
-| Add or remove a chapter | `casesContent.ts`, **and** `.stage` height in `Experience.module.css` — it must stay `(chapters + 3) × 100svh`: Work + all chapters + Ending + Contact (currently `800svh` for five chapters) |
+| Add or remove a chapter | `casesContent.ts`, **and** `.stage` height in `Experience.module.css` — it must stay `(chapters + 3) × 100svh`: Work + all chapters + Ending + Contact (currently `600svh` for three chapters) |
 | Reorder or re-time beats | the position parameters in the timeline table above |
 | Edit chapter copy or screenshot order | `casesContent.ts` |
 | Different flight path feel | the flight tween's `ease` (currently `power1.inOut`) |
@@ -842,10 +871,10 @@ study. The footer is the first ordinary-flow surface below it.
 
 ### Geometry and ownership
 
-With five case chapters, `.stage` is `800svh`: one band for Work, five for the
+With three case chapters, `.stage` is `600svh`: one band for Work, three for the
 case landing/chapters, one for Ending and one for Contact. At 1440 × 900 the
-logical rests are Work 900, case intro 1800, result 5400, Ending 6300 and
-Contact 7200. The footer starts at 8100, exactly one viewport after Contact and
+logical rests are Work 900, case intro 1800, result 3600, Ending 4500 and
+Contact 5400. The footer starts at 6300, exactly one viewport after Contact and
 exactly equal to page maximum because the footer itself is at least `100svh`.
 
 `case-featured` stops at the result. `closing-sequence` owns both later seams
@@ -881,7 +910,7 @@ Lenis glide to the footer while Lenis remains stopped. The temporary event hold
 stays through the 520ms tail window, then Lenis restarts. Starting Lenis first
 would let the initiating flick pass the footer rest.
 
-Scrolling upward from the footer re-captures Contact at 7200. The same three
+Scrolling upward from the footer re-captures Contact at 5400. The same three
 guards still apply: cross the rest by 8px before re-entry, swallow the tail for
 700ms, and ignore the boundary while `stageTravelling()` marks a deliberate
 footer navigation or Back-to-top journey.
@@ -913,11 +942,72 @@ the case-study intro. Back to top still resets every beat before gliding home.
   release, not the case-to-ending seam.
 - An **About** section. `doc/moresimple.md` lists it in the footer navigation;
   the link is left out until there is something to point at.
-- The Work cards link to `/work/<slug>` routes that do not exist yet.
+- `/work` and the three secondary `/work/<slug>` pages now exist as short,
+  ordinary-flow studies using the supplied copy and labelled interface
+  illustrations. The Salam Cargo card opens the existing flagship stage.
 - Real destinations for the contact email and the social links. They are
-  deliberately obvious placeholders in `src/components/contact/siteLinks.ts`.
+  deliberately obvious fallback placeholders in `src/components/contact/siteLinks.ts`.
+  `.env.example` lists the public launch variables; provide real values in local
+  or hosting build settings. The production origin also controls canonical/social
+  metadata and sitemap entries. No origin is invented when it is unknown.
+
+### Visual consistency follow-up — 2026-09-05
+
+Palette correction after review: the berry/lilac/plum direction described in
+the earlier implementation history is superseded. The current palette uses
+warm cream, limestone, charcoal and muted olive throughout; the ending and
+footer echo the Hero's dark side. `doc/moresimple.md` and the shared CSS tokens
+record this direction. Tested normal-text palette pairs are at least 4.61:1.
+
+Hero and Work now share the cream token; the Hero's dark ground and the footer
+use related plum tones. Work/Cases labels, editorial body sizes, rules and
+responsive gutters are aligned. The footer uses the shared muted olive accent
+and a clean outlined wordmark. Touch and reduced-motion Work layouts use normal
+document flow at every width, matching the other sections.
+
+`stageNavigation.ts` resolves requested fragments once after initialization;
+section settlement reads scroll position only, so a stale `#contact` cannot
+override later navigation. Reload/cross-document history restores the current
+chapter; same-document fragment history resolves the named section. Leaving
+cinematic mode unregisters the Work handoff. Footer navigation clears the
+pending release timer so it cannot restart Lenis after returning to a held beat.
+
+Production verification for this pass:
+- `npm run build` and TypeScript pass; all four project routes return 200,
+  an unknown project returns 404.
+- `scripts/visual-check.js`: hovered flight fully covers the slot, reverse
+  restores the card within 1px, no clipped text at 320/390/768/1024px.
+- `scripts/stage-navigation-check.js`: direct fragments, chapter reload and
+  cross-page history, fragment history, rapid footer return, keyboard steps
+  and reduced-motion teardown pass.
+- Every flagship chapter fits at 900×600 and 1024×768. Touch at 390×844
+  shows loaded images and all sections in ordinary flow. No runtime errors.
+- One production Work→Cases sample at 1440×900: 156 animation-frame intervals,
+  median 16.7ms, p95 16.9ms, none over 32ms. This is a local sample, not a
+  low-end-device benchmark.
 
 ### Case-study split
 
 The approved layout now places the visual full-bleed on the **left** and the
 story on the right. `doc/moresimple.md` records the same direction.
+
+### Optimization follow-up — 2026-10-09
+
+The geometry remains six stage viewports for Work, three chapters, Ending and
+Contact. Normal-flow CSS is now the baseline at every width; `stageLayout.ts`
+sets `data-cinematic` before Work measures the eligible desktop composition and
+removes it during cleanup. No-JavaScript desktop exposes all three articles and
+closing content without overlap. Work's entrance is its local GSAP timeline
+controlled by the hero handoff, with no independent intro ScrollTrigger.
+
+The active desktop gallery retains eager image loading, while native figures
+lazy-load media-specific sources and provide full screenshot links. Matching
+overview quality avoids duplicate derivatives. Arbitrary stage-scroll recovery
+and motion-mode reading restoration are described in §10 above. Footer moved
+outside main for its global landmark; its release/rest geometry is unchanged.
+
+Production navigation/footer/project-route and new optimization checks pass;
+25 touch route/layout checks have no overflow, clipped text or runtime errors.
+Desktop handoff/chapter samples measured p95 16.8–17ms with zero to one intervals over 32ms per sample.
+See `doc/OPTIMIZATION_AUDIT.md` for the complete loading/footer comparison and
+remaining physical-device/launch checks.

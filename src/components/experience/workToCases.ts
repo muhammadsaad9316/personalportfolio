@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type { WorkHandle } from "@/components/work/Work";
 import { getLenis } from "@/components/SmoothScroll";
 import { registerStageBeat, stageReleased } from "./stageBeats";
@@ -66,8 +66,6 @@ const ID = "work-to-cases";
 
 const CINEMATIC =
   "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
-const STATIC =
-  "(max-width: 899px), (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse)";
 
 /** Layout position of `el` inside `root`, ignoring every transform on the way
  *  up. Both elements must share the same offsetParent chain. */
@@ -137,7 +135,7 @@ export function useWorkToCases({
            Both are read live rather than baked into the tween, so a resize
            part-way through can never leave the frame heading for a stale
            slot. */
-        const flight = { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+        const flight = { x: 0, y: 0, scaleX: 1, scaleY: 1, width: 0, height: 0 };
         const travel = { t: 0 };
 
         /** The image's own aspect ratio. `naturalWidth` is density-corrected
@@ -176,8 +174,8 @@ export function useWorkToCases({
              With the card fixed at 360:230 it would land the image 48% too
              wide. */
           const ratio = mediaRatio();
-          const boxW = frame.offsetWidth * sx;
-          const boxH = frame.offsetHeight * sy;
+          const boxW = flight.width * sx;
+          const boxH = flight.height * sy;
           if (!boxW || !boxH) return;
           const coverW = Math.max(boxW, boxH * ratio);
           gsap.set(media, {
@@ -189,13 +187,15 @@ export function useWorkToCases({
         const measure = () => {
           const from = offsetWithin(frame, sticky);
           const to = offsetWithin(slot, sticky);
-          const rect = frame.getBoundingClientRect();
-          const currentScaleX = 1 + (flight.scaleX - 1) * travel.t;
-          const currentScaleY = 1 + (flight.scaleY - 1) * travel.t;
-          const width = rect.width / currentScaleX;
-          const height = rect.height / currentScaleY;
+          // Layout dimensions exclude the parent card's hover scale. Measuring
+          // its transformed box made the landing too small after a hovered exit.
+          const layout = getComputedStyle(frame);
+          const width = parseFloat(layout.width);
+          const height = parseFloat(layout.height);
           const slotRect = slot.getBoundingClientRect();
           if (!width || !height) return;
+          flight.width = width;
+          flight.height = height;
           flight.x = to.x - from.x - FULL_BLEED_OVERSCAN;
           flight.y = to.y - from.y - FULL_BLEED_OVERSCAN;
           flight.scaleX =
@@ -515,6 +515,7 @@ export function useWorkToCases({
 
         return () => {
           window.clearTimeout(settleId);
+          unregister();
           window.removeEventListener("wheel", onWheel);
           window.removeEventListener("keydown", onKey);
           window.removeEventListener("resize", onResize);
@@ -532,29 +533,6 @@ export function useWorkToCases({
        * the complete case story are ordinary stacked sections, with one
        * screenshot in each chapter (see Cases.module.css).
        * ------------------------------------------------------------ */
-      mm.add(STATIC, () => {
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-          return;
-        }
-
-        const copy = [...studyIn];
-        gsap.set(copy, { y: 24, autoAlpha: 0 });
-
-        ScrollTrigger.create({
-          id: "cases-intro",
-          trigger: cases,
-          start: "top 72%",
-          once: true,
-          onEnter: () =>
-            gsap.to(copy, {
-              y: 0,
-              autoAlpha: 1,
-              duration: 0.6,
-              stagger: 0.08,
-              ease: "power3.out",
-            }),
-        });
-      });
 
       return () => mm.revert();
     },

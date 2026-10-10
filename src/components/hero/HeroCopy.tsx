@@ -1,3 +1,6 @@
+"use client";
+
+import { navigateToStage } from "@/components/experience/stageNavigation";
 import styles from "./Hero.module.css";
 
 export default function HeroCopy() {
@@ -48,7 +51,13 @@ export default function HeroCopy() {
           </p>
 
           <div className={styles.ctaRow} data-reveal="copy">
-            <a className={styles.cta} href="#work">
+            <a
+              className={styles.cta}
+              href="#work"
+              onClick={(event) => {
+                if (navigateToStage("work")) event.preventDefault();
+              }}
+            >
               Explore My Work
               <svg
                 className={styles.ctaArrow}

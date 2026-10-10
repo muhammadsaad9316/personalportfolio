@@ -7,7 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
+import { gsap, registerDesktopPlugins, useGSAP } from "@/lib/gsap";
+import { navigateToStage } from "@/components/experience/stageNavigation";
+import { prepareStageLayout } from "@/components/experience/stageLayout";
 import ProjectPreview from "./ProjectPreview";
 import {
   CENTRE,
@@ -24,6 +26,9 @@ const RING_GAP = 26;
 const RING_DASH = `${RING_C / 4 - RING_GAP} ${RING_GAP}`;
 /** Shift the dash pattern so a gap is centred on each 45-degree hub. */
 const RING_DASH_OFFSET = RING_C / 8 - RING_GAP / 2;
+
+const CINEMATIC =
+  "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
 
 /** Hub dot positions, in the connector SVG's viewBox. */
 const HUB_DOTS = PROJECTS.map((p) => CONNECTORS[p.placement].hub);
@@ -61,7 +66,7 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
 
   /* ------------------------------------------------------------------
    * Entrance: heading -> centre -> lines -> projects.  One timeline,
-   * one ScrollTrigger named `work-intro`.
+   * controlled by the Hero handoff through this component's API.
    * ---------------------------------------------------------------- */
   useGSAP(
     () => {
@@ -74,204 +79,198 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
         root.querySelectorAll<SVGPathElement>("[data-connector]"),
       );
 
-      mm.add("(prefers-reduced-motion: reduce)", () => {
-        gsap.set(
-          [
-            q("[data-work-reveal]"),
-            q("[data-project]"),
-            q("[data-hub-dot]"),
-            q("[data-trace-node]"),
-          ],
-          { autoAlpha: 1, x: 0, y: 0, scale: 1 },
-        );
-        gsap.set(q("[data-centre]"), { autoAlpha: 1, scale: 1 });
-        gsap.set(lines, {
-          strokeDasharray: "none",
-          strokeDashoffset: 0,
-          autoAlpha: 1,
-        });
-      });
+      mm.add(
+        CINEMATIC,
+        () => {
+          api.current = null;
+          registerDesktopPlugins();
+          const restoreLayout = prepareStageLayout(root);
 
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const armed = () => {
-          gsap.set(q("[data-work-reveal]"), { y: 26, autoAlpha: 0 });
-          gsap.set(q("[data-centre]"), { scale: 0.85, autoAlpha: 0 });
-          gsap.set(q("[data-hub-dot]"), { scale: 0, autoAlpha: 0 });
-          gsap.set(q("[data-trace-node]"), { scale: 0, autoAlpha: 0 });
-          gsap.set(q("[data-project]"), { y: 30, scale: 1, autoAlpha: 0 });
-          for (const line of lines) {
-            const len = line.getTotalLength();
-            gsap.set(line, {
-              strokeDasharray: len,
-              strokeDashoffset: len,
-              autoAlpha: 1,
-            });
-          }
-        };
-        armed();
-
-        /* The documented order, with each beat given room to land before the
-           next begins: text, centre, lines, projects. */
-        const buildEnter = () =>
-          gsap
-            .timeline({ defaults: { ease: "power3.out" } })
-            .addLabel("heading", 0)
-            .to(
-              q("[data-work-reveal]"),
-              { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.12 },
-              "heading",
-            )
-            .addLabel("centre", 0.62)
-            .to(
-              q("[data-centre]"),
-              { scale: 1, autoAlpha: 1, duration: 0.8, ease: "back.out(1.4)" },
-              "centre",
-            )
-            .addLabel("lines", 1.18)
-            .to(
-              lines,
-              {
-                strokeDashoffset: 0,
-                duration: 0.85,
-                stagger: 0.055,
-                ease: "power2.inOut",
-              },
-              "lines",
-            )
-            .to(
-              q("[data-hub-dot]"),
-              { scale: 1, autoAlpha: 1, duration: 0.35, stagger: 0.09 },
-              "lines+=0.5",
-            )
-            .to(
-              q("[data-trace-node]"),
-              {
-                scale: 1,
+          const armed = () => {
+            gsap.set(q("[data-work-reveal]"), { y: 26, autoAlpha: 0 });
+            gsap.set(q("[data-centre]"), { scale: 0.85, autoAlpha: 0 });
+            gsap.set(q("[data-hub-dot]"), { scale: 0, autoAlpha: 0 });
+            gsap.set(q("[data-trace-node]"), { scale: 0, autoAlpha: 0 });
+            gsap.set(q("[data-project]"), { y: 30, scale: 1, autoAlpha: 0 });
+            for (const line of lines) {
+              const len = line.getTotalLength();
+              gsap.set(line, {
+                strokeDasharray: len,
+                strokeDashoffset: len,
                 autoAlpha: 1,
-                duration: 0.3,
-                stagger: 0.025,
-                transformOrigin: "center center",
-              },
-              "lines+=0.48",
-            )
-            .addLabel("projects", 1.95)
-            .to(
-              q("[data-project]"),
-              { y: 0, autoAlpha: 1, duration: 0.75, stagger: 0.11 },
-              "projects",
-            );
+              });
+            }
+          };
+          armed();
 
-        /* Mirror of the entrance for the way back: projects leave first, the
-           lines retract into the centre, the circle shrinks, and the heading
-           is the last thing to go. */
-        const buildExit = () =>
-          gsap
-            .timeline({ defaults: { ease: "power2.in" } })
-            .to(
-              q("[data-project]"),
-              {
-                y: 18,
-                scale: 0.94,
-                autoAlpha: 0,
-                duration: 0.45,
-                stagger: 0.07,
-              },
-              0,
-            )
-            .to(
-              q("[data-hub-dot]"),
-              { scale: 0, autoAlpha: 0, duration: 0.3, stagger: 0.05 },
-              0.18,
-            )
-            .to(
-              q("[data-trace-node]"),
-              {
-                scale: 0,
-                autoAlpha: 0,
-                duration: 0.28,
-                stagger: 0.02,
-                transformOrigin: "center center",
-              },
-              0.18,
-            )
-            .to(
-              lines,
-              {
-                strokeDashoffset: (_i: number, t: SVGPathElement) =>
-                  t.getTotalLength(),
-                duration: 0.55,
-                stagger: 0.035,
-                ease: "power2.inOut",
-              },
-              0.28,
-            )
-            .to(
-              q("[data-centre]"),
-              { scale: 0.8, autoAlpha: 0, duration: 0.45 },
-              0.55,
-            )
-            .to(
-              q("[data-work-reveal]"),
-              { y: -20, autoAlpha: 0, duration: 0.45, stagger: 0.07 },
-              0.72,
-            );
+          /* The documented order, with each beat given room to land before the
+             next begins: text, centre, lines, projects. */
+          const buildEnter = () =>
+            gsap
+              .timeline({ defaults: { ease: "power3.out" } })
+              .addLabel("heading", 0)
+              .to(
+                q("[data-work-reveal]"),
+                { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.12 },
+                "heading",
+              )
+              .addLabel("centre", 0.62)
+              .to(
+                q("[data-centre]"),
+                {
+                  scale: 1,
+                  autoAlpha: 1,
+                  duration: 0.8,
+                  ease: "back.out(1.4)",
+                },
+                "centre",
+              )
+              .addLabel("lines", 1.18)
+              .to(
+                lines,
+                {
+                  strokeDashoffset: 0,
+                  duration: 0.85,
+                  stagger: 0.055,
+                  ease: "power2.inOut",
+                },
+                "lines",
+              )
+              .to(
+                q("[data-hub-dot]"),
+                { scale: 1, autoAlpha: 1, duration: 0.35, stagger: 0.09 },
+                "lines+=0.5",
+              )
+              .to(
+                q("[data-trace-node]"),
+                {
+                  scale: 1,
+                  autoAlpha: 1,
+                  duration: 0.3,
+                  stagger: 0.025,
+                  transformOrigin: "center center",
+                },
+                "lines+=0.48",
+              )
+              .addLabel("projects", 1.95)
+              .to(
+                q("[data-project]"),
+                { y: 0, autoAlpha: 1, duration: 0.75, stagger: 0.11 },
+                "projects",
+              );
 
-        api.current = {
-          enter: (speed = 1) => {
-            buildEnter().timeScale(speed).play(0);
-          },
-          exit: buildExit,
-          reset: armed,
-        };
+          /* Mirror of the entrance for the way back: projects leave first, the
+             lines retract into the centre, the circle shrinks, and the heading
+             is the last thing to go. */
+          const buildExit = () =>
+            gsap
+              .timeline({ defaults: { ease: "power2.in" } })
+              .to(
+                q("[data-project]"),
+                {
+                  y: 18,
+                  scale: 0.94,
+                  autoAlpha: 0,
+                  duration: 0.45,
+                  stagger: 0.07,
+                },
+                0,
+              )
+              .to(
+                q("[data-hub-dot]"),
+                { scale: 0, autoAlpha: 0, duration: 0.3, stagger: 0.05 },
+                0.18,
+              )
+              .to(
+                q("[data-trace-node]"),
+                {
+                  scale: 0,
+                  autoAlpha: 0,
+                  duration: 0.28,
+                  stagger: 0.02,
+                  transformOrigin: "center center",
+                },
+                0.18,
+              )
+              .to(
+                lines,
+                {
+                  strokeDashoffset: (_i: number, t: SVGPathElement) =>
+                    t.getTotalLength(),
+                  duration: 0.55,
+                  stagger: 0.035,
+                  ease: "power2.inOut",
+                },
+                0.28,
+              )
+              .to(
+                q("[data-centre]"),
+                { scale: 0.8, autoAlpha: 0, duration: 0.45 },
+                0.55,
+              )
+              .to(
+                q("[data-work-reveal]"),
+                { y: -20, autoAlpha: 0, duration: 0.45, stagger: 0.07 },
+                0.72,
+              );
 
-        // When the wrapper is not driving the handoff (touch, narrow windows)
-        // the section reveals itself on scroll, as before.
-        const driven = window.matchMedia(
-          "(min-width: 900px) and (hover: hover) and (pointer: fine)",
-        ).matches;
-        if (!driven) {
-          ScrollTrigger.create({
-            id: "work-intro",
-            trigger: root,
-            start: "top 68%",
-            once: true,
-            // Touch gets a shorter entrance, per the device modes table.
-            onEnter: () => api.current?.enter(1.7),
-          });
-        }
-      });
+          let running: gsap.core.Timeline | null = null;
+          const nextApi: Pick<WorkHandle, "enter" | "exit" | "reset"> = {
+            enter: (speed = 1) => {
+              running?.kill();
+              running = buildEnter().timeScale(speed).play(0);
+            },
+            exit: () => {
+              running?.kill();
+              running = buildExit();
+              return running;
+            },
+            reset: () => {
+              running?.kill();
+              running = null;
+              armed();
+            },
+          };
+          api.current = nextApi;
+
+          return () => {
+            restoreLayout();
+            running?.kill();
+            if (api.current === nextApi) api.current = null;
+          };
+        },
+      );
 
       /* ----------------------------------------------------------------
        * Cursor label. Fine pointer only — touch and keyboard never need
        * a pointer-tracked element.
        * -------------------------------------------------------------- */
-      mm.add(
-        "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
-        () => {
-          const label = labelRef.current;
-          if (!label) return;
+      mm.add(CINEMATIC, () => {
+        const label = labelRef.current;
+        if (!label) return;
 
-          labelXY.current = {
-            x: gsap.quickTo(label, "x", { duration: 0.42, ease: "power3" }),
-            y: gsap.quickTo(label, "y", { duration: 0.42, ease: "power3" }),
-          };
+        labelXY.current = {
+          x: gsap.quickTo(label, "x", { duration: 0.42, ease: "power3" }),
+          y: gsap.quickTo(label, "y", { duration: 0.42, ease: "power3" }),
+        };
 
-          const onMove = (event: PointerEvent) => {
-            const box = rootRef.current
-              ?.querySelector("[data-network]")
-              ?.getBoundingClientRect();
-            if (!box) return;
-            labelXY.current?.x(event.clientX - box.left);
-            labelXY.current?.y(event.clientY - box.top);
-          };
+        const onMove = (event: PointerEvent) => {
+          const box = rootRef.current
+            ?.querySelector("[data-network]")
+            ?.getBoundingClientRect();
+          if (!box) return;
+          labelXY.current?.x(event.clientX - box.left);
+          labelXY.current?.y(event.clientY - box.top);
+        };
 
-          window.addEventListener("pointermove", onMove, { passive: true });
-          return () => {
-            window.removeEventListener("pointermove", onMove);
-            labelXY.current = null;
-          };
-        },
-      );
+        window.addEventListener("pointermove", onMove, { passive: true });
+        return () => {
+          window.removeEventListener("pointermove", onMove);
+          labelXY.current = null;
+          gsap.killTweensOf(label);
+          gsap.set(label, { autoAlpha: 0, scale: 0.85 });
+        };
+      });
 
       return () => mm.revert();
     },
@@ -286,168 +285,173 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
       const root = rootRef.current;
       if (!root) return;
 
-      const cards = Array.from(
-        root.querySelectorAll<HTMLElement>("[data-project-motion]"),
-      );
-      const traces = Array.from(
-        root.querySelectorAll<SVGGElement>("[data-trace-active]"),
-      );
-      const dots = Array.from(
-        root.querySelectorAll<SVGCircleElement>("[data-hub-dot]"),
-      );
-      const centre = root.querySelector<SVGGElement>("[data-centre-pointer]");
-      const branch = root.querySelector<SVGGElement>("[data-centre-branch]");
-      const packet = root.querySelector<SVGRectElement>("[data-centre-packet]");
-      const label = labelRef.current;
-      const reduced = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-      const d = reduced ? 0.001 : 0.45;
-
-      cards.forEach((card, i) => {
-        const isActive = active === i;
-        const quiet = active !== null && !isActive;
-        gsap.to(card, {
-          scale: isActive ? 1.035 : 1,
-          autoAlpha: quiet ? 0.45 : 1,
-          duration: d,
-          ease: "power3.out",
-        });
-      });
-
-      traces.forEach((trace, i) => {
-        const isActive = active === i;
-        const paths = Array.from(
-          trace.querySelectorAll<SVGPathElement>("[data-connector-active]"),
+      const mm = gsap.matchMedia();
+      mm.add(CINEMATIC, () => {
+        const cards = Array.from(
+          root.querySelectorAll<HTMLElement>("[data-project-motion]"),
         );
-        paths.forEach((path) => {
-          const len = path.getTotalLength();
-          gsap.to(path, {
-            strokeDasharray: len,
-            strokeDashoffset: isActive ? 0 : len,
-            duration: reduced ? 0.001 : 0.55,
-            ease: "power2.inOut",
-            overwrite: "auto",
+        const traces = Array.from(
+          root.querySelectorAll<SVGGElement>("[data-trace-active]"),
+        );
+        const dots = Array.from(
+          root.querySelectorAll<SVGCircleElement>("[data-hub-dot]"),
+        );
+        const centre = root.querySelector<SVGGElement>("[data-centre-pointer]");
+        const branch = root.querySelector<SVGGElement>("[data-centre-branch]");
+        const packet = root.querySelector<SVGRectElement>("[data-centre-packet]");
+        const label = labelRef.current;
+        const reduced = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        const d = reduced ? 0.001 : 0.45;
+
+        cards.forEach((card, i) => {
+          const isActive = active === i;
+          const quiet = active !== null && !isActive;
+          gsap.to(card, {
+            scale: isActive ? 1.035 : 1,
+            autoAlpha: quiet ? 0.45 : 1,
+            duration: d,
+            ease: "power3.out",
           });
         });
 
-        gsap.to(trace.querySelectorAll("[data-trace-node-active]"), {
-          scale: isActive ? 1 : 0,
-          autoAlpha: isActive ? 1 : 0,
-          duration: reduced ? 0.001 : 0.3,
-          stagger: isActive ? 0.035 : 0,
-          ease: "power3.out",
-          transformOrigin: "center center",
-          overwrite: "auto",
+        traces.forEach((trace, i) => {
+          const isActive = active === i;
+          const paths = Array.from(
+            trace.querySelectorAll<SVGPathElement>("[data-connector-active]"),
+          );
+          paths.forEach((path) => {
+            const len = path.getTotalLength();
+            gsap.to(path, {
+              strokeDasharray: len,
+              strokeDashoffset: isActive ? 0 : len,
+              duration: reduced ? 0.001 : 0.55,
+              ease: "power2.inOut",
+              overwrite: "auto",
+            });
+          });
+
+          gsap.to(trace.querySelectorAll("[data-trace-node-active]"), {
+            scale: isActive ? 1 : 0,
+            autoAlpha: isActive ? 1 : 0,
+            duration: reduced ? 0.001 : 0.3,
+            stagger: isActive ? 0.035 : 0,
+            ease: "power3.out",
+            transformOrigin: "center center",
+            overwrite: "auto",
+          });
+
+          const packet = trace.querySelector<SVGRectElement>("[data-trace-packet]");
+          const pulse = trace.querySelector<SVGCircleElement>("[data-trace-pulse]");
+          const main = trace.querySelector<SVGPathElement>("[data-trace-main]");
+          if (packet) {
+            gsap.killTweensOf(packet);
+            gsap.set(packet, { x: 0, y: 0, autoAlpha: 0 });
+          }
+          if (pulse) {
+            gsap.killTweensOf(pulse);
+            gsap.set(pulse, { scale: 0.7, autoAlpha: 0 });
+          }
+          if (isActive && !reduced && packet && pulse && main) {
+            gsap.fromTo(
+              packet,
+              { autoAlpha: 1 },
+              {
+                autoAlpha: 0,
+                duration: 0.58,
+                ease: "power2.inOut",
+                motionPath: {
+                  path: main,
+                  align: main,
+                  alignOrigin: [0.5, 0.5],
+                },
+                overwrite: true,
+              },
+            );
+            gsap.fromTo(
+              pulse,
+              { scale: 0.7, autoAlpha: 1 },
+              {
+                scale: 2,
+                autoAlpha: 0,
+                delay: 0.48,
+                duration: 0.34,
+                ease: "power2.out",
+                transformOrigin: "center center",
+                overwrite: true,
+              },
+            );
+          }
         });
 
-        const packet = trace.querySelector<SVGRectElement>("[data-trace-packet]");
-        const pulse = trace.querySelector<SVGCircleElement>("[data-trace-pulse]");
-        const main = trace.querySelector<SVGPathElement>("[data-trace-main]");
+        dots.forEach((dot, i) => {
+          gsap.to(dot, {
+            scale: active === i ? 1.9 : 1,
+            duration: d,
+            ease: "power3.out",
+            transformOrigin: "center center",
+          });
+        });
+
+        if (centre) {
+          const lean =
+            active === null
+              ? { x: 0, y: 0, rotate: 0 }
+              : CENTRE_LEAN[PROJECTS[active].placement];
+          gsap.to(centre, {
+            x: lean.x,
+            y: lean.y,
+            rotation: `${lean.rotate}_short`,
+            duration: reduced ? 0.001 : 0.6,
+            ease: "power3.out",
+            transformOrigin: "center center",
+            overwrite: "auto",
+          });
+        }
+
+        if (branch) {
+          gsap.to(branch, {
+            scaleX: active === null ? 0 : 1,
+            duration: reduced ? 0.001 : 0.38,
+            ease: active === null ? "power2.in" : "power3.out",
+            transformOrigin: "left center",
+            overwrite: "auto",
+          });
+        }
+
         if (packet) {
           gsap.killTweensOf(packet);
-          gsap.set(packet, { x: 0, y: 0, autoAlpha: 0 });
-        }
-        if (pulse) {
-          gsap.killTweensOf(pulse);
-          gsap.set(pulse, { scale: 0.7, autoAlpha: 0 });
-        }
-        if (isActive && !reduced && packet && pulse && main) {
-          gsap.fromTo(
-            packet,
-            { autoAlpha: 1 },
-            {
-              autoAlpha: 0,
-              duration: 0.58,
-              ease: "power2.inOut",
-              motionPath: {
-                path: main,
-                align: main,
-                alignOrigin: [0.5, 0.5],
+          if (active === null || reduced) {
+            gsap.set(packet, { x: 0, autoAlpha: 0 });
+          } else {
+            gsap.fromTo(
+              packet,
+              { x: 0, autoAlpha: 1 },
+              {
+                x: 26,
+                autoAlpha: 0,
+                duration: 0.46,
+                ease: "power2.inOut",
+                overwrite: true,
               },
-              overwrite: true,
-            },
-          );
-          gsap.fromTo(
-            pulse,
-            { scale: 0.7, autoAlpha: 1 },
-            {
-              scale: 2,
-              autoAlpha: 0,
-              delay: 0.48,
-              duration: 0.34,
-              ease: "power2.out",
-              transformOrigin: "center center",
-              overwrite: true,
-            },
-          );
+            );
+          }
+        }
+
+        if (label) {
+          const tracked = labelXY.current !== null;
+          gsap.to(label, {
+            autoAlpha: active === null || !tracked ? 0 : 1,
+            scale: active === null || !tracked ? 0.85 : 1,
+            duration: reduced ? 0.001 : 0.3,
+            ease: "power2.out",
+          });
         }
       });
-
-      dots.forEach((dot, i) => {
-        gsap.to(dot, {
-          scale: active === i ? 1.9 : 1,
-          duration: d,
-          ease: "power3.out",
-          transformOrigin: "center center",
-        });
-      });
-
-      if (centre) {
-        const lean =
-          active === null
-            ? { x: 0, y: 0, rotate: 0 }
-            : CENTRE_LEAN[PROJECTS[active].placement];
-        gsap.to(centre, {
-          x: lean.x,
-          y: lean.y,
-          rotation: `${lean.rotate}_short`,
-          duration: reduced ? 0.001 : 0.6,
-          ease: "power3.out",
-          transformOrigin: "center center",
-          overwrite: "auto",
-        });
-      }
-
-      if (branch) {
-        gsap.to(branch, {
-          scaleX: active === null ? 0 : 1,
-          duration: reduced ? 0.001 : 0.38,
-          ease: active === null ? "power2.in" : "power3.out",
-          transformOrigin: "left center",
-          overwrite: "auto",
-        });
-      }
-
-      if (packet) {
-        gsap.killTweensOf(packet);
-        if (active === null || reduced) {
-          gsap.set(packet, { x: 0, autoAlpha: 0 });
-        } else {
-          gsap.fromTo(
-            packet,
-            { x: 0, autoAlpha: 1 },
-            {
-              x: 26,
-              autoAlpha: 0,
-              duration: 0.46,
-              ease: "power2.inOut",
-              overwrite: true,
-            },
-          );
-        }
-      }
-
-      if (label) {
-        gsap.to(label, {
-          autoAlpha: active === null ? 0 : 1,
-          scale: active === null ? 0.85 : 1,
-          duration: reduced ? 0.001 : 0.3,
-          ease: "power2.out",
-        });
-      }
+      return () => mm.revert();
     },
-    { scope: rootRef, dependencies: [active] },
+    { scope: rootRef, dependencies: [active], revertOnUpdate: true },
   );
 
   /** Keyboard focus produces the identical state, and parks the label on
@@ -741,6 +745,10 @@ function ProjectCard({
             ref={linkRef}
             className={styles.projectLink}
             href={project.href}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              if (flagship && navigateToStage("cases")) event.preventDefault();
+            }}
             onMouseEnter={() => onEnter(index, linkRef.current)}
             onMouseLeave={onLeave}
             onFocus={() => onEnter(index, linkRef.current)}

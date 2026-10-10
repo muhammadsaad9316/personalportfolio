@@ -94,10 +94,12 @@ The first and strongest project can have a more cinematic presentation.
 Its main visual stays full-height while the visitor scrolls through a short story:
 
 1. **Salam Cargo ERP** as a title card over the branch overview screenshot — the name, one line of context, and three facts
-2. **The problem** — five branches and disconnected records, with the company overview
-3. **The approach** — one shared operating language, with the bilties workspace
-4. **The solution** — connected branch and warehouse handoffs, with arrival management
-5. **The result** — one clear operational picture, with expense visibility
+2. **The solution** — shared statuses and connected branch and warehouse handoffs, with arrival management
+3. **The result** — one clear operational picture, with expense visibility
+
+Keep exactly three slides. The overview includes the problem of disconnected
+branch records; the solution includes the approach, so the story stays complete
+without separate problem and approach slides.
 
 The supplied product screenshots are uncovered in place: the next one is revealed from its top edge downward, over the one before it, which stays exactly where it is underneath. They do not crossfade and they do not slide — the picture being read never moves out from under the reader, and the new one arrives already at its final framing rather than travelling into it. The picture keeps easing out of a slight zoom for a moment after the edge has passed, so the reveal has depth instead of reading as a flat wipe.
 
@@ -126,7 +128,7 @@ After the final project, show:
 
 **Understand deeply. Design clearly. Build properly.**
 
-Make this a bold editorial poster on rich mineral berry-rose, not cream. Use a heavy
+Make this a bold editorial poster on deep warm charcoal. Use a heavy
 display face for the main words, a contrasting italic serif for **Same**, and
 set the three method phrases as a numbered rule along the bottom.
 
@@ -148,13 +150,13 @@ Use:
 
 Only use typography, spacing, and a small amount of movement here.
 
-Use a soft mineral-lilac ground with dark aubergine type. The call to action is
+Use a warm limestone ground with charcoal type and restrained olive accents. The call to action is
 a full-width ruled row, not a card or button block.
 
 The final case result → **Different problems.** and **Different problems.** →
 **One last thing.** seams use the same transition: an incoming outer wrapper
 rises from below while its inner wrapper counter-moves from above. Only the
-moving surface paints the new background, so the berry or lilac colour wipes
+moving surface paints the new background, so the charcoal or limestone colour wipes
 upward first; the label, masked heading characters and supporting copy then
 rise in that order. Keep a small 15% surface parallax. One gesture plays one
 whole move. Do not reuse this curtain anywhere else. Touch and reduced-motion
@@ -164,7 +166,7 @@ modes show both sections in normal document flow.
 
 The footer should include:
 
-- Saad.
+- Abdullah.
 - Designer × Full-stack Developer
 - Work
 - Case Studies
@@ -178,27 +180,45 @@ The footer should include:
 The footer should feel like a calm ending after the more animated parts of the website.
 
 Use the supplied dark footer reference as the layout direction: an oversized
-outlined **Saad** wordmark spanning the full width of the upper half, three
+outlined **Abdullah** wordmark spanning the full width of the upper half, three
 ruled information columns, a circular back-to-top control, and a quiet two-part
 copyright rail without a center ornament. Pair Bricolage display type with an
-Instrument Serif statement and monospaced labels. Use near-black plum so it
-closes the aubergine/lilac sequence without returning to cream. Keep the
+Instrument Serif statement and monospaced labels. Use the same near-black charcoal
+as the Hero's developer side, completing one cream, charcoal and olive palette. Keep the
 complete footer inside one viewport frame: short desktop screens give the
 wordmark the remaining space, while small screens place Explore and Connect in
 two compact columns under the full-width statement. Keep every touch target
 full-size instead of shrinking it.
 
-On fine pointers, footer text briefly reshapes through a one-shot liquid
-distortion, then returns to its exact original form even if the pointer remains
-over it. Nothing loops, and touch or reduced-motion modes keep the type still.
+The footer has a native WebGL liquid surface. Mouse movement and touch stir local
+ripples and swirls that deform the original wordmark, text, rules and icons as
+one liquid surface, then settle back into their original form. The GPU field
+feeds a bounded SVG displacement map on the content; its underlying layout,
+accessible text, links and hit targets remain intact. Keyboard focus restores
+the static view. The liquid pauses outside the viewport or while the page is
+hidden. Reduced-motion mode and unsupported WebGL show the ordinary static
+footer. Touch scrolling remains native.
+
+The optimized mobile composition shows the hero and Work content immediately,
+with static secondary code decoration and no ambient hero loops. The shorter code
+preview lets visitors reach Work sooner. Keep the same portrait identity and
+typefaces. Case screenshots provide a visible, keyboard-accessible link to the
+full image. All three chapters, Ending, Contact and the footer remain readable
+in normal document order when JavaScript is unavailable.
+
+The liquid footer loads when visible. Touch starts at a smaller simulation/map
+budget, updates its displacement map at 30 Hz, and settles sooner. Repeated missed
+frames lower quality and eventually restore the static surface. These changes
+preserve the approved original-content deformation on capable devices.
 
 ## Animation Approach
 
 Use:
 
 - **GSAP and ScrollTrigger** for the main cinematic animations
-- **Lenis** for smooth scrolling
+- **Lenis** for restrained home-page desktop scroll smoothing
 - **CSS and SVG** for smaller effects
+- **Native WebGL** only for the interactive footer liquid field and content displacement
 
 The website should have a few unforgettable animation moments instead of making every element move.
 

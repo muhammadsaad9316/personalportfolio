@@ -11,6 +11,10 @@ next-env.d.ts
 .vercel
 *.tsbuildinfo
 .shots/
-.shots/
 .playwright-mcp/
+.playwright-cli/
 *.crdownload
+mainiamgereference/
+WorkImage/
+test_webp_*.webp
+

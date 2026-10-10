@@ -1,0 +1,225 @@
+# Abdullah portfolio — living PRD and AI handoff
+
+Last updated: 2026-10-09. This file records the user's requested changes and the current implementation state. Read it at the start of a new AI session, then follow `AGENTS.md` and the architecture documents. Keep it current as work is completed; do not treat an in-progress item as verified or finished.
+
+## Read order and constraints
+
+1. `.prd` — current requirements, edit ledger, evidence, and next steps.
+2. `AGENTS.md` — repository rules and relevant skill/tool routing.
+3. `doc/moresimple.md` — approved experience, layout, copy, and visual direction.
+4. `doc/MOTION_ARCHITECTURE.md` — mandatory ownership table before animation or transition edits.
+5. `doc/WORK_TO_CASES.md` — built stage geometry and checks before touching Work, Case Studies, the shared stage, or the Salam Cargo visual.
+
+Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-motion, and animation-performance changes. The stack is Next.js, React, TypeScript, CSS Modules, GSAP/ScrollTrigger, and Lenis. Native WebGL is authorized for the footer liquid requirement; it does not replace GSAP or add a general animation framework. One owner must control each animated DOM property. Honor reduced motion and preserve native touch scrolling and accessible document order.
+
+The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. No dependencies or commits have been added for the changes below. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
+
+## Latest request: implement the optimization and mobile recommendations
+
+On 2026-10-09 the user requested a detailed whole-site audit, then explicitly
+asked to continue with implementation. The highest-impact loading, mobile,
+animation-budget and navigation fixes are implemented. The approved desktop
+motion, portrait identity, typefaces and three-slide case study are preserved.
+No dependencies, commits or deployment were added. The original audit and the
+implementation comparison are recorded in `doc/OPTIMIZATION_AUDIT.md`.
+
+An isolated production build passed. All five routes passed 25 touch-layout
+checks at 320/390/768/1024px and landscape 844px without horizontal overflow,
+detected clipped text, or runtime errors. Production navigation/history/keyboard,
+reduced-motion cleanup, arbitrary-scroll recovery, reading-position restoration,
+no-JavaScript document order and footer lifecycle checks passed. At CPU 4× and
+approximately 1.6 Mbps, two fresh-browser mobile loads measured LCP 1.556/1.576s,
+versus 3.752–4.532s in the baseline. Initial subresource transfer fell from 507.7
+to 387.7 KiB; JavaScript from 201.5 to 193.6 KiB; image transfer from 187.3 to
+74.9 KiB. Startup long-task excess measured 211–279ms versus 780–1010ms, and the
+initial layout-shift sum was 0.00030. These are local lab observations with a
+warmed image server, not field Core Web Vitals or physical-phone results.
+
+The mobile composition is immediately readable and has no ambient hero loops;
+offscreen hero mutations fell from 896/second to zero. Media-specific image
+sources avoid hidden desktop galleries and duplicate portrait/overview variants.
+The liquid solver and desktop Lenis load on demand, with Lenis limited to home.
+Touch footer economy uses a smaller field/map and 30Hz displacement updates;
+missed-frame windows lower quality, then fall back to static content. The final
+CPU 4× footer sample had p95 16.8ms and zero of 224 intervals over 32ms, versus
+33.4ms and 58/193 in the baseline. An earlier implementation sample was 18.1ms.
+Desktop handoffs/chapter samples had p95 16.8–17ms, with zero to one intervals
+over 32ms per sample. A repeated full-quality desktop footer sample reached p95
+33.3ms (12/209 intervals over 32ms), so adaptation was tightened to react to two
+missed intervals above 25ms in a window capped at 30 frames or 500ms, then
+reverified. Controlled final footer samples measured 16.9ms desktop and 16.8ms
+CPU 4× touch, with no intervals over 32ms. Other sessions produced much slower
+samples while sharing an animated harness page; see the audit for that variation.
+The global footer now sits outside main. Launch metadata, sitemap, robots and a
+social-preview image support a configured production origin.
+
+Remaining external inputs: real contact email, GitHub/LinkedIn profiles and
+production URL. An asynchronous question requested these; they have not been
+supplied. `.env.example` lists the public build variables. Unknown origins omit
+canonical/image URLs and sitemap entries rather than inventing a deployed host.
+Physical Android/iPhone/Safari, deployed CDN behavior, hidden-tab runtime checks
+and real-user INP remain unmeasured. Continue that acceptance work after launch
+details are available; do not promise universal zero lag.
+
+## Completed request: three case-study slides
+
+On 2026-10-09 the user asked to reduce the third section's five internal slides
+to three. `src/components/cases/casesContent.ts` now contains only overview
+(`intro`), solution, and result, numbered 01–03. The disconnected-records problem
+is folded into the overview and the workflow-mapping approach into the solution.
+The same three slides appear in touch and reduced-motion document flow.
+
+`src/components/experience/Experience.module.css` shortens the cinematic stage
+from `800svh` to `600svh`. Chapter and closing navigation already derive their
+positions from the rendered count. At 1440 × 900, the case rests are 1800,
+2700 and 3600; Ending is 4500, Contact 5400, and the footer 6300. The motion
+owners, reveal choreography, and Work preview handoff remain the same.
+
+Updated the approved experience and motion/geometry documents, and the existing
+navigation/footer check expectations. Historical five-slide evidence in
+`doc/WORK_TO_CASES.md` is explicitly labelled historical.
+
+Completed and verified: TypeScript (`npx tsc --noEmit`); stage navigation, keyboard
+forward/reverse, chapter reload and cross-page history, Ending/Contact fragments,
+footer return and reduced-motion teardown; hovered Work preview covers the case
+slot and reverses within 1px; no text clipping at 320/390/768/1024px. Local Chrome
+wheel forward/reverse confirms exactly `intro,solution,result`, with no skipped
+or empty beats. The stage measures 5400px, footer top and max scroll both 6300px.
+Live reduced-motion cleanup leaves three visible plain headings and removes all
+SplitText wrappers. Touch emulation at 390 × 844 shows three visible articles in
+document order without horizontal overflow. No runtime errors. A local dev-build
+chapter transition sample recorded 96 frame intervals: median 16.7ms, p95 16.9ms,
+none over 32ms. The solution/result screenshots were visually checked. Production
+build and physical-device performance were not rerun for this content/count change.
+
+## Earlier requirement: liquid footer implemented; physical-device acceptance pending
+
+**Implemented and locally verified.** The user's clarification supersedes the earlier background-only interpretation: hovering or touching must deform the original footer text and other visible content locally, as a liquid, then let it recover its original form. A ripple canvas behind an unchanged wordmark is insufficient. Cross-device frame-budget acceptance still requires physical phones.
+
+The footer wordmark, text, icons, and rules should respond directly under the mouse or finger. Keep the existing layout, real DOM links, accessible names, navigation, focus treatment, and click behavior. The decorative surface must not intercept input. Mobile gestures must continue to scroll normally. The target is 60 fps during interaction, with rendering paused when the footer is outside the viewport, the tab is hidden, or the interaction has settled. Reduced motion, keyboard focus, unsupported WebGL, and context loss must leave a static, usable footer.
+
+### Current implementation
+
+- `src/components/footer/FooterFluid.tsx` mounts an aria-hidden canvas and an SVG `feDisplacementMap`. Passive pointer/touch input supplies local impulses. Intersection/visibility/media-query/focus handling controls the local render loop and static fallbacks.
+- `src/components/footer/footerFluidSolver.ts` implements a native WebGL2 liquid field with half-float ping-pong textures, velocity advection, vorticity, pressure projection, and damped waves. A bounded displacement map feeds the SVG filter so the browser deforms the **original DOM's paint**, including text and icons, without replacing semantic content or changing layout boxes.
+- `src/components/footer/FooterFluid.module.css` positions the noninteractive canvas behind the content. `SiteFooter.tsx` provides `[data-footer-content]` and mounts the effect. `SiteFooter.module.css` isolates the footer and keeps its content above the canvas.
+- GSAP still owns the short footer entrance, column/rule transforms, and opacity. `FooterFluid` alone owns the liquid field and the content's `filter`; it must never compete for GSAP-owned transforms/opacity. The old one-shot text turbulence handler has been removed.
+- `doc/moresimple.md` and `doc/MOTION_ARCHITECTURE.md` describe this ownership and user-approved direction. The living handoff records implementation and measured local evidence separately from physical-device acceptance.
+
+### Current evidence and remaining work
+
+The optimized content-deforming implementation was tested in a production build
+on Windows Chrome using Intel Iris Xe through ANGLE/D3D11. Desktop footer p95 was
+16.9ms with 0/211 intervals over 32ms. Touch p95 was 16.9ms; CPU 4× touch p95 was
+16.8ms with 0/224 intervals over 32ms. Touch starts in economy mode with a 96×208
+field, 22×48 displacement map and 30Hz map updates. This supersedes the audit's
+33.4ms CPU 4× sample. Lower-power physical-device acceptance remains pending.
+
+Production checks verified visible original-content deformation; unchanged
+native link/button layout boxes; keyboard order and Back to top; native touch
+scrolling and touch Back to top; idle/offscreen pause; live reduced-motion and
+keyboard-focus static restoration; WebGL context loss/restoration and unsupported
+fallback; route disposal/remount without duplicate canvases; footer keyboard
+links to Work/Cases/Contact; no browser runtime errors; and a successful build.
+The previously reproduced motion-mode jump is fixed; a dedicated check verifies
+footer reading position through reduced/native ↔ cinematic changes. Hidden-tab
+pause is implemented but was not separately exercised in production runtime checks.
+Physical Android/iPhone GPU/Safari testing, hosted performance, and lower-power
+frame-budget acceptance remain outstanding. See `doc/OPTIMIZATION_AUDIT.md` for
+evidence, limitations, and recommended next work.
+
+## Completed edit ledger
+
+### 1. Hero portrait replacement and face/neck correction
+
+The user requested a new hero person based on their reference photos, then asked for the face and neck to be corrected. The actual reference directory is spelled `mainiamgereference` (the user called it `mainimagereference`). The final generation uses four original Pixel photographs as the identity source; a stylized WhatsApp reference was excluded from the final identity correction. Preserve the real subject's facial proportions, natural skin/beard texture, short-to-moderate neck, jaw-to-neck connection, and head/shoulder scale.
+
+- Final transparent RGBA source: `media/hero-saad-source.png`, **828 × 1900**.
+- Website asset: `public/media/hero-saad.webp`, encoded at quality 95 and alpha quality 100. The conversion preserves the generated image rather than retouching its face.
+- Generation intent and final prompt: `media/hero-saad-prompt.md`.
+- `src/components/hero/Hero.tsx` uses `/media/hero-saad.webp` with the actual dimensions and responsive sizing.
+- `src/components/experience/heroToWork.ts` uses `PERSON_AR = 828 / 1900`; the existing maximum zoom of 9.5 is unchanged.
+
+Verified: TypeScript passed; desktop 1440 × 900 and touch-size 390 × 844 visual checks; Hero → Work and reverse return using the existing stage controls. These checks do not imply that unbuilt later case-study chapters are complete.
+
+### 2. Portrait above the floating hero card
+
+The user's screenshot identified a dashboard card overlapping the person. In `src/components/hero/Hero.module.css`, `.designCluster` now has `z-index: 3`; the portrait remains at `z-index: 4`. The portrait therefore covers cards when pointer motion brings them across it. The DOM layout and stage choreography are preserved.
+
+Verified in the browser: portrait/card stacking is 4/3, and the Hero ↔ Work handoff still returns correctly.
+
+### 3. Visible identity changed from Saad to Abdullah
+
+Updated visible brand/copyright/alt text, metadata, and the hero code sample in:
+
+- `src/app/layout.tsx`
+- `src/app/work/page.tsx`
+- `src/app/work/[slug]/page.tsx`
+- `src/components/hero/Hero.tsx`
+- `src/components/hero/heroContent.ts` (code-sample variable `abdullah`)
+- `src/components/footer/SiteFooter.tsx`
+- `doc/moresimple.md` (current footer identity references)
+
+`src/components/footer/SiteFooter.module.css` recalibrates the wider Abdullah wordmark: desktop `font-size: min(25cqw, 60svh)`, and at widths ≤700 px `font-size: 21.3cqw`, retaining the existing wordmark scale. Placeholder social handles/email and historical asset/file names were not changed into invented contact details.
+
+Verified: the wordmark fits viewport widths 320–1920 px, the 320 px header retains space between Abdullah and Connect, and touch layouts at 320/390/768 px plus a reduced-motion desktop layout remain readable without clipping.
+
+### 4. Work text enlarged and card spacing adjusted
+
+The user requested slightly larger text in the Work section shown in their screenshot. `src/components/work/Work.module.css` now uses larger responsive typography:
+
+| Element | Current size rule |
+| --- | --- |
+| Eyebrow/project number | `clamp(.875rem, .9vw, .95rem)` |
+| Main heading | `clamp(2.25rem, 3.4vw, 3.5rem)` |
+| Intro paragraph | `clamp(1.35rem, 1.6vw, 1.6rem)` |
+| View all projects | `clamp(.875rem, .95vw, .95rem)` |
+| Project name | `clamp(1.2rem, 1.5vw, 1.5rem)` |
+| Project kind/summary | `clamp(1rem, 1.05vw, 1.1rem)` |
+| Cursor label | `.75rem` |
+| Static/mobile heading | `clamp(2.85rem, 8vw, 4.65rem)` |
+
+The taller card text required more vertical room: network height is now `min(780px, calc(100svh - clamp(96px, 13.5vh, 180px)))`; desktop summaries hide on screens ≤860 px high, alongside the existing width-based fallback. This prevents the card rows from colliding while retaining the approved layout.
+
+Verified at 1440 × 900: heading 48.96 px, body 23.04 px, project names 21.6 px, labels 16 px, and a 27 px gap between card rows. The two-line heading is retained. Checks at 1024 × 768, 900 × 600, and a fresh-load 1280 × 800 showed cards fitting their viewport. Work → Cases still covers its target slot; reverse returns to Work with cards visible and then to Hero. TypeScript passed, and a clean browser reload had no console errors. When checking changed breakpoints, load a fresh route rather than relying on a hash left at a previous viewport's scroll position.
+
+### 5. Whole-site optimization implementation
+
+- Hero/Work: cinematic-only entrances and SVG/pointer setup; visible/allowed hero
+  loops only; narrower mobile portrait source at quality 75 and reserved desktop
+  quality 88 derivative. Mobile code decoration is capped at 185px.
+- Images: responsive gallery/figure sources, shared quality variants, lazy native
+  chapter figures and below-fold Work preview; full screenshot links. Added closer
+  portrait widths to `next.config.ts`.
+- Footer: dynamically imported solver; smaller touch map/simulation, 30Hz economy
+  map transfer, tail-latency quality reduction/static fallback, quicker settle.
+  Desktop entrance readiness is explicit; native/no-JS text stays visible.
+- Stage: `stageLayout.ts` gates overlapping CSS; `stageNavigation.ts` restores
+  arbitrary scroll positions and preserves reading sections across motion modes.
+  All later chapters/closing panels/figures stay in normal order without JS.
+- Routes/accessibility: home-only lazy Lenis; global footer outside main; minimum
+  44px hero Work and keyboard skip targets; screenshot link accessible names
+  include their visible labels and new-tab behavior.
+- Launch readiness: `.env.example`, public contact/profile settings,
+  `src/lib/siteMetadata.ts`, canonical/social metadata for each route,
+  `robots.ts`, `sitemap.ts`, and `/opengraph-image`. Real details remain pending.
+- Regression evidence: production build/type checks, 25 responsive route checks,
+  existing navigation/footer/project-route scripts, the new
+  `scripts/optimization-check.js` and `scripts/footer-budget-check.js`. Measurements and limitations are recorded above
+  and in the audit's implementation comparison. Architecture documents updated.
+
+Mobile Lighthouse accessibility/best-practices/SEO are 100/100/100, with 55 audits
+passed and zero failed after correcting the screenshot-link label mismatch. An
+injected 27ms/frame competing-work check verifies economy → low → static budget
+fallback after 53 simulation frames, stopped rendering and usable Contact navigation. This is a functional
+stress check, not a physical-device benchmark.
+
+### 6. Updates synchronized and pushed to main branch
+
+- All new updates (whole-site optimization, liquid footer, responsive portrait assets, stage navigation, 3-slide case studies, and launch SEO/metadata) committed.
+- Reference directories (`mainiamgereference/` and `WorkImage/`) and temporary test webp files excluded in `.gitignore` per user preference.
+- Local `main` branch updated with all feature commits and cleanly synchronized to `origin/main`.
+
+## Update protocol for future AI sessions
+
+Before editing, read the current requirement and pending work above; preserve completed changes unless the user revises them. After each meaningful change, update this file with the affected paths, resulting behavior, useful verification evidence, and any unresolved limitation. Keep in-progress and completed statuses distinct. Replace preliminary footer performance numbers with final measurements only after the actual content-deforming version has been tested. Keep the architecture documents synchronized if ownership, motion, or stage behavior changes.

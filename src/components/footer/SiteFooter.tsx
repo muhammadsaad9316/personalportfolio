@@ -16,12 +16,12 @@ import {
   settleStage,
   stageIsArmed,
 } from "@/components/experience/stageBeats";
+import { navigateToStage } from "@/components/experience/stageNavigation";
 import { NAV_LINKS, SOCIAL_LINKS } from "@/components/contact/siteLinks";
+import FooterFluid from "./FooterFluid";
 import styles from "./SiteFooter.module.css";
 
-const MOTION = "(prefers-reduced-motion: no-preference)";
-const LIQUID_HOVER =
-  "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const MOTION = "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
 
 const reducedMotion = () =>
   typeof window !== "undefined" &&
@@ -33,28 +33,13 @@ const SOCIAL_ICONS = {
   Email: EnvelopeSimple,
 } as const;
 
-/** Where a beat rests, measured off the live stage rather than assumed. */
-function beatTop(beat: "work" | "cases" | "contact") {
-  const stage = document.querySelector<HTMLElement>("[data-experience-stage]");
-  const sticky = document.querySelector<HTMLElement>(
-    "[data-experience-sticky]",
-  );
-  if (!stage) return 0;
-  const top = stage.offsetTop;
-  const step = sticky?.offsetHeight ?? 0;
-  if (beat === "work") return top;
-  if (beat === "cases") return top + step;
-  const chapters = stage.querySelectorAll("[data-case-chapter]").length;
-  return top + (chapters + 2) * step;
-}
-
 /**
  * The footer.
  *
  * `doc/moresimple.md` asks for a calm ending after the animated parts of the
- * site, so the motion here is one short entrance plus a local liquid-type
- * response under a fine pointer. Nothing loops and touch/reduced-motion modes
- * remain still.
+ * site, so the DOM motion is one short entrance. FooterFluid owns only the
+ * liquid pixels and the content's SVG displacement filter. The original DOM
+ * remains accessible and interactive while its painted surface ripples.
  *
  * The interesting part is not the animation, it is the navigation. Work and
  * Case Studies live inside the cinematic stage, where every scroll position is
@@ -66,16 +51,16 @@ function beatTop(beat: "work" | "cases" | "contact") {
  */
 export default function SiteFooter() {
   const rootRef = useRef<HTMLElement>(null);
-  const displacementRef = useRef<SVGFEDisplacementMapElement>(null);
 
   useGSAP(
-    (_context, contextSafe) => {
+    () => {
       const root = rootRef.current;
       if (!root) return;
 
       const mm = gsap.matchMedia();
 
       mm.add(MOTION, () => {
+        root.dataset.footerReady = "true";
         const rule = root.querySelector<HTMLElement>("[data-footer-rule]");
         const cols = gsap.utils.toArray<HTMLElement>("[data-footer-col]", root);
 
@@ -107,86 +92,9 @@ export default function SiteFooter() {
         });
 
         return () => {
+          delete root.dataset.footerReady;
           trigger.kill();
           tl.kill();
-        };
-      });
-
-      mm.add(LIQUID_HOVER, () => {
-        const displacement = displacementRef.current;
-        const targets = gsap.utils.toArray<HTMLElement>(
-          "[data-liquid-text]",
-          root,
-        );
-        if (!displacement || !contextSafe) return;
-
-        let active: HTMLElement | null = null;
-        let liquidTimeline: ReturnType<typeof gsap.timeline> | null = null;
-
-        const enter = contextSafe((event: PointerEvent) => {
-          const target = event.currentTarget as HTMLElement;
-          const fontSize = Number.parseFloat(getComputedStyle(target).fontSize);
-          const peak = Math.min(18, Math.max(4, fontSize * 0.18));
-
-          liquidTimeline?.kill();
-          if (active && active !== target) {
-            gsap.set(active, { clearProps: "filter" });
-          }
-          active = target;
-
-          liquidTimeline = gsap
-            .timeline({
-              onComplete: () => {
-                gsap.set(target, { clearProps: "filter" });
-                if (active === target) active = null;
-              },
-            })
-            .set(target, { filter: 'url("#footer-liquid-distortion")' })
-            .set(displacement, { attr: { scale: 0 } })
-            .to(displacement, {
-              attr: { scale: peak },
-              duration: 0.16,
-              ease: "power3.out",
-            })
-            .to(displacement, {
-              attr: { scale: 0 },
-              duration: 0.54,
-              ease: "elastic.out(1, 0.48)",
-            });
-        });
-
-        const leave = contextSafe((event: PointerEvent) => {
-          const target = event.currentTarget as HTMLElement;
-          if (active !== target) return;
-
-          liquidTimeline?.kill();
-          liquidTimeline = gsap
-            .timeline({
-              onComplete: () => {
-                gsap.set(target, { clearProps: "filter" });
-                if (active === target) active = null;
-              },
-            })
-            .to(displacement, {
-              attr: { scale: 0 },
-              duration: 0.28,
-              ease: "power2.out",
-            });
-        });
-
-        targets.forEach((target) => {
-          target.addEventListener("pointerenter", enter);
-          target.addEventListener("pointerleave", leave);
-        });
-
-        return () => {
-          liquidTimeline?.kill();
-          targets.forEach((target) => {
-            target.removeEventListener("pointerenter", enter);
-            target.removeEventListener("pointerleave", leave);
-            gsap.set(target, { clearProps: "filter" });
-          });
-          gsap.set(displacement, { attr: { scale: 0 } });
         };
       });
 
@@ -240,19 +148,7 @@ export default function SiteFooter() {
   const goToBeat =
     (beat: "work" | "cases" | "contact") =>
     (event: React.MouseEvent) => {
-      if (!stageIsArmed()) return; // touch/reduced: let the anchor work
-      event.preventDefault();
-      resetStage();
-      setStageTravelling(true);
-      const lenis = getLenis();
-      const y = beatTop(beat);
-      if (lenis) lenis.scrollTo(y, { immediate: true, force: true });
-      else window.scrollTo(0, y);
-      setStageTravelling(false);
-      /* Each beat now re-derives itself from the position, exactly as it would
-         after a reload there — which is the only state the guards consider
-         valid. */
-      settleStage();
+      if (navigateToStage(beat)) event.preventDefault();
     };
 
   return (
@@ -263,54 +159,20 @@ export default function SiteFooter() {
       aria-label="Site footer"
       data-after-stage
     >
-      <svg
-        className={styles.liquidFilter}
-        width="0"
-        height="0"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <filter
-            id="footer-liquid-distortion"
-            x="-16%"
-            y="-38%"
-            width="132%"
-            height="176%"
-            colorInterpolationFilters="sRGB"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.012 0.075"
-              numOctaves="1"
-              seed="8"
-              stitchTiles="stitch"
-              result="liquid-noise"
-            />
-            <feDisplacementMap
-              ref={displacementRef}
-              in="SourceGraphic"
-              in2="liquid-noise"
-              scale="0"
-              xChannelSelector="R"
-              yChannelSelector="B"
-            />
-          </filter>
-        </defs>
-      </svg>
+      <FooterFluid footerRef={rootRef} />
 
-      <div className={styles.inner}>
+      <div className={styles.inner} data-footer-content>
         <div className={styles.wordmark} data-footer-col aria-hidden="true">
-          <span data-liquid-text>Saad</span>
+          <span data-footer-text>Abdullah</span>
         </div>
 
         <div className={styles.grid}>
           <div className={styles.brand} data-footer-col>
             <p className={styles.role}>
-              <span data-liquid-text>Designer × Full-stack Developer</span>
+              <span data-footer-text>Designer × Full-stack Developer</span>
             </p>
             <p className={styles.blurb}>
-              <span data-liquid-text>
+              <span data-footer-text>
                 Building thoughtful digital products.
               </span>
             </p>
@@ -318,7 +180,7 @@ export default function SiteFooter() {
 
           <nav className={styles.col} data-footer-col aria-label="Explore">
             <h2 className={styles.colHead}>
-              <span data-liquid-text>Explore</span>
+              <span data-footer-text>Explore</span>
             </h2>
             <ul className={styles.list}>
               {NAV_LINKS.map((item) => (
@@ -328,7 +190,7 @@ export default function SiteFooter() {
                     href={item.href}
                     onClick={item.beat ? goToBeat(item.beat) : undefined}
                   >
-                    <span data-liquid-text>{item.label}</span>
+                    <span data-footer-text>{item.label}</span>
                     <ArrowRight
                       className={styles.navArrow}
                       weight="regular"
@@ -343,7 +205,7 @@ export default function SiteFooter() {
           <div className={styles.connectGroup} data-footer-col>
             <nav className={styles.connect} aria-label="Connect">
               <h2 className={styles.colHead}>
-                <span data-liquid-text>Connect</span>
+                <span data-footer-text>Connect</span>
               </h2>
               <ul className={styles.list}>
                 {SOCIAL_LINKS.map((item) => {
@@ -362,7 +224,7 @@ export default function SiteFooter() {
                           weight={item.label === "Email" ? "regular" : "fill"}
                           aria-hidden="true"
                         />
-                        <span data-liquid-text>{item.label}</span>
+                        <span data-footer-text>{item.label}</span>
                       </a>
                     </li>
                   );
@@ -379,7 +241,7 @@ export default function SiteFooter() {
               <span className={styles.topCircle} aria-hidden="true">
                 <ArrowUp weight="regular" />
               </span>
-              <span className={styles.topLabel} data-liquid-text>
+              <span className={styles.topLabel} data-footer-text>
                 Back to top
               </span>
             </button>
@@ -392,10 +254,10 @@ export default function SiteFooter() {
 
         <div className={styles.base} data-footer-col>
           <p>
-            <span data-liquid-text>© 2026 Saad.</span>
+            <span data-footer-text>© 2026 Abdullah.</span>
           </p>
           <p>
-            <span data-liquid-text>
+            <span data-footer-text>
               Designed with intention. Built with code.
             </span>
           </p>

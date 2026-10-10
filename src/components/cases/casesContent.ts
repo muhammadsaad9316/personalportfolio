@@ -9,7 +9,7 @@ export type CaseImage = {
 };
 
 export type CaseChapter = {
-  id: "intro" | "problem" | "approach" | "solution" | "result";
+  id: "intro" | "solution" | "result";
   label?: string;
   title: string;
   body?: string;
@@ -51,7 +51,7 @@ export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
        that it stops being a title card. */
     label: "Case study",
     title: "Salam Cargo ERP",
-    body: "One connected system for a five-branch cargo operation — bookings, payments, dispatch and warehouse handoffs held in a single traceable flow.",
+    body: "Five cargo branches worked with disconnected records. Salam Cargo ERP brings bookings, payments, dispatch and warehouse handoffs into one traceable flow.",
     proof: ["Management system", "Five branches", "Booking to delivery"],
     image: screenshot(
       "01-branch-overview.png",
@@ -60,33 +60,10 @@ export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
     ),
   },
   {
-    id: "problem",
-    label: "The problem",
-    title: "Five branches. Five versions of the truth.",
-    body: "Bookings, payments, cargo status, and expenses lived in separate branch workflows. Getting one reliable company picture meant chasing updates and reconciling records by hand.",
-    proof: ["05 operating branches", "Disconnected records"],
-    image: screenshot(
-      "04-company-overview.png",
-      "Company overview comparing bookings, revenue, expenses, profit, and outstanding balances across five branches.",
-    ),
-  },
-  {
-    id: "approach",
-    label: "The approach",
-    title: "Design the operation before the interface.",
-    body: "I mapped the cargo journey from booking to delivery, then created one shared status model so every branch could work the same way without losing local responsibility.",
-    proof: ["Shared status language", "Role-aware workflows"],
-    image: screenshot(
-      "02-bilties.png",
-      "Bilties workspace with searchable cargo bookings, payment states, branch filters, and dispatch statuses.",
-      "42% center",
-    ),
-  },
-  {
     id: "solution",
     label: "The solution",
     title: "Every booking. Every handoff. One system.",
-    body: "A role-aware ERP now connects branch bookings, packing, dispatch, warehouse arrivals, payments, and operating expenses in one traceable flow.",
+    body: "I mapped the booking-to-delivery journey and created shared statuses and role-aware workflows. The ERP connects bookings, dispatch, warehouse arrivals, payments and expenses.",
     proof: ["Branch → warehouse", "Booking → payment"],
     image: screenshot(
       "05-arrival-management.png",
