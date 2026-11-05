@@ -13,6 +13,8 @@
  * full-bleed case-study slot.
  */
 
+import { branchOverview } from "@/lib/portfolioImages";
+
 export type ProjectPlacement = "topLeft" | "topRight" | "bottomRight" | "bottomLeft";
 
 export type Project = {
@@ -50,9 +52,9 @@ export const PROJECTS: Project[] = [
          the element that flies is this card's own <img>, so a different file
          here would make the landing a visible swap instead of one continuous
          object. */
-      src: "/media/screenshotofSalamCargoo/01-branch-overview.png",
-      width: 2800,
-      height: 2640,
+      src: branchOverview.src,
+      width: branchOverview.width,
+      height: branchOverview.height,
       /* Sized for the full-bleed state it reaches in Case Studies, not for the
          354px card it starts in — a transform never makes the browser fetch a
          larger source. There the box is 58vw wide and a full viewport tall, so

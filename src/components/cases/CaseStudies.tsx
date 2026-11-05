@@ -583,7 +583,7 @@ export default function CaseStudies() {
               </div>
 
               <figure className={styles.mobileVisual}>
-                <a href={chapter.image.src} target="_blank" rel="noopener noreferrer"
+                <a href={chapter.image.fullSrc} target="_blank" rel="noopener noreferrer"
                   aria-label={`View full screenshot ↗: ${chapter.image.alt} (opens in a new tab)`}>
                   <StudyImage index={index} />
                   <span className={styles.enlarge}>View full screenshot ↗</span>

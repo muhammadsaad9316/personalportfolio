@@ -1,7 +1,15 @@
 /** Content for the flagship Salam Cargo case-study chapters. */
 
+import type { StaticImageData } from "next/image";
+import {
+  arrivalManagement, arrivalManagementFull,
+  branchOverview, branchOverviewFull,
+  expenses, expensesFull,
+} from "@/lib/portfolioImages";
+
 export type CaseImage = {
   src: string;
+  fullSrc: string;
   width: number;
   height: number;
   alt: string;
@@ -30,13 +38,15 @@ export type CaseChapter = {
  * figures.
  */
 const screenshot = (
-  file: string,
+  file: StaticImageData,
+  full: StaticImageData,
   alt: string,
   position = "center center",
 ): CaseImage => ({
-  src: `/media/screenshotofSalamCargoo/${file}`,
-  width: 2800,
-  height: 2640,
+  src: file.src,
+  fullSrc: full.src,
+  width: file.width,
+  height: file.height,
   alt,
   position,
 });
@@ -54,7 +64,8 @@ export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
     body: "Five cargo branches worked with disconnected records. Salam Cargo ERP brings bookings, payments, dispatch and warehouse handoffs into one traceable flow.",
     proof: ["Management system", "Five branches", "Booking to delivery"],
     image: screenshot(
-      "01-branch-overview.png",
+      branchOverview,
+      branchOverviewFull,
       "Salam Cargo ERP branch overview showing collections, bookings, cargo weight, balances, and recent activity.",
       "left center",
     ),
@@ -66,7 +77,8 @@ export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
     body: "I mapped the booking-to-delivery journey and created shared statuses and role-aware workflows. The ERP connects bookings, dispatch, warehouse arrivals, payments and expenses.",
     proof: ["Branch → warehouse", "Booking → payment"],
     image: screenshot(
-      "05-arrival-management.png",
+      arrivalManagement,
+      arrivalManagementFull,
       "Arrival management workspace tracking dispatched trucks, pending cargo, and completed warehouse receipts.",
       "40% center",
     ),
@@ -78,7 +90,8 @@ export const FLAGSHIP_CHAPTERS: CaseChapter[] = [
     body: "Teams can trace daily work without switching systems, while leadership can see branch performance, cash movement, and operational risk without stitching reports together.",
     proof: ["527 weekly bookings", "One source of truth"],
     image: screenshot(
-      "03-expenses.png",
+      expenses,
+      expensesFull,
       "Expenses workspace summarizing branch spending, categories, transactions, and the people responsible.",
       "42% center",
     ),

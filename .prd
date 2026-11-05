@@ -14,7 +14,36 @@ Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-
 
 The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. Historical sections describe the state at the time of each task; the latest release section records current publication status. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
 
-## Latest request: publish the current site to GitHub and Vercel
+## Latest request: optimize images without losing quality
+
+On 2026-11-05 the user requested image and delivery optimization without quality
+loss. Six existing PNGs were losslessly recompressed from 3,520,172 to 2,802,806
+bytes (20.38% smaller). Three full-size case screenshots now have lossless WebP
+downloads totaling 522,278 bytes instead of 1,016,849 (48.64% smaller). Old PNG
+URLs remain available. The portrait's bytes are unchanged.
+
+`src/lib/portfolioImages.ts` uses static imports for content-hashed asset URLs
+and immutable caching. Work and the first case chapter still use the same PNG
+source; full-size links use the corresponding lossless WebP through `fullSrc`.
+All responsive sizes, quality settings, dimensions, framing and motion owners
+remain unchanged. PNG inputs remain in the resize path: changing them to WebP
+altered resized pixels, so that approach was rejected.
+
+Full decoded RGBA and dimension comparisons passed for all six PNGs and three
+WebPs. Nine Next.js resized previews (480/750/2560px, quality 88) match the previous
+preview pixels exactly. The final isolated production build and TypeScript
+passed; shared-frame coverage/reversal within 1px, responsive reduced-motion
+checks, touch loading, 2800×2640 enlargement, legacy PNG URLs and immutable cache
+headers passed. See `doc/IMAGE_OPTIMIZATION.md` and local evidence under
+`.shots/image-optimization-2026-11-05`. The manual regeneration command is
+`node scripts/optimize-images.cjs`; no dependency was added.
+
+This reduces source/full-size transfer and improves repeat-load caching, not a
+measured first-load performance result. The previous larger-text, startup and
+liquid-footer audit findings remain. GitHub/Vercel publication is in progress
+under the user's existing release authorization.
+
+## Earlier request: publish the current site to GitHub and Vercel
 
 On 2026-11-05 the user authorized pushing the current site and deploying it live.
 Release scope includes the existing Work hover/reverse/input repairs, hidden
@@ -522,6 +551,17 @@ stress check, not a physical-device benchmark.
 - Hosted routes, metadata, sitemap, image delivery, scrollbar/desktop wheel and
   emulated touch navigation passed. Known audit and contact-configuration gaps
   remain; this release does not claim to fix them.
+
+### 13. Lossless images and cacheable asset URLs
+
+- Losslessly recompressed six PNGs and added three full-resolution WebPs, reducing
+  those screenshot downloads by 48.64% while retaining old PNG URLs.
+- Added shared static imports and full-size screenshot URLs; preserved every
+  preview setting and motion owner. The portrait source is unchanged.
+- Source pixel/dimension comparisons, nine resized pixel comparisons, production
+  build/TypeScript, shared geometry/reversal, responsive/touch and cache checks
+  passed. Added `scripts/optimize-images.cjs` and `doc/IMAGE_OPTIMIZATION.md`.
+- GitHub and Vercel publication is in progress. Existing mobile audit gaps remain.
 
 ## Update protocol for future AI sessions
 

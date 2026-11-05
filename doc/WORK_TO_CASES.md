@@ -8,6 +8,18 @@ Read `doc/moresimple.md` for what the move is supposed to feel like and
 approved behaviour was actually built, the numbers it runs on, and what was
 measured.
 
+### Image delivery update — 2026-11-05
+
+Work and the first case chapter now share the same content-hashed, statically
+imported PNG source from `src/lib/portfolioImages.ts`. All screenshot dimensions,
+quality 88, `sizes` values and motion geometry remain unchanged. The three
+full-screenshot links use separate lossless WebPs with identical full-size
+pixels; the old PNG URLs remain available. PNG inputs are retained for resized
+previews to keep Next.js resampling pixel-identical. Nine generated variants
+passed pixel-hash comparisons. Production-mode browser checks passed shared
+coverage, reversal within 1px, touch image loading and immutable caching. See
+`doc/IMAGE_OPTIMIZATION.md` for sizes and evidence. Animation ownership is unchanged.
+
 ### Single-scroll correction — 2026-10-24
 
 The user reproduced one physical scroll advancing two sections. A decaying stream

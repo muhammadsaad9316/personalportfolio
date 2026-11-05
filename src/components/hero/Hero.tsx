@@ -4,6 +4,7 @@ import { getImageProps } from "next/image";
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { navigateToStage } from "@/components/experience/stageNavigation";
 import { NAV_LINKS } from "@/components/contact/siteLinks";
+import { heroPortrait } from "@/lib/portfolioImages";
 import { gsap, useGSAP } from "@/lib/gsap";
 import HeroCopy from "./HeroCopy";
 import DesignCluster from "./DesignCluster";
@@ -21,7 +22,7 @@ import {
 } from "./heroAmbient";
 import styles from "./Hero.module.css";
 
-const PERSON_SRC = "/media/hero-saad.webp";
+const PERSON_SRC = heroPortrait.src;
 /* The Hero -> Work transition magnifies this figure several times over, so
    desktop must download the full-resolution file even though it is laid out
    small. Touch never runs the transition and keeps a sensible variant. */
