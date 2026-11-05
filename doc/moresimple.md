@@ -37,8 +37,6 @@ The person, cards, and background should also move slightly with the mouse to cr
 
 This transformation should be one of the main impressive moments of the website.
 
-## Hero to Work Transition
-
 ### Mobile hero direction — 2026-11-05
 
 Use the user's phone reference as direction, not as an exact replica. Below
@@ -54,6 +52,8 @@ Desktop keeps its split Designer/Developer composition and existing motion.
 Mobile navigation offers Work, Case Studies and Contact, closes after selection,
 and supports keyboard disclosure and Escape. Native touch scrolling and reduced
 motion remain available; mobile cards do not loop or follow the pointer.
+
+## Hero to Work Transition
 
 When the visitor scrolls:
 
