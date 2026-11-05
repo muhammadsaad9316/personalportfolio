@@ -40,8 +40,16 @@ headers passed. See `doc/IMAGE_OPTIMIZATION.md` and local evidence under
 
 This reduces source/full-size transfer and improves repeat-load caching, not a
 measured first-load performance result. The previous larger-text, startup and
-liquid-footer audit findings remain. GitHub/Vercel publication is in progress
-under the user's existing release authorization.
+liquid-footer audit findings remain.
+
+Application commit `f807f0de09d8b615a0a01b4d894d0c55e921c0cd` was pushed to main
+and deployed successfully under the existing release authorization. Vercel
+deployment `dpl_GHmeiCF233LQ69FY5cme3aCJdgHb` reached READY and GitHub's Vercel
+status is success. Production `https://personalportfolio-ten-red.vercel.app`
+returned HTTP 200; each of the three full-size assets matched its verified local
+file's SHA-256 byte for byte and had a one-year immutable cache header. The old
+branch screenshot PNG URL still returns 200. A second manual optimization run
+was idempotent: no image bytes changed. The helper also verifies bit depth.
 
 ## Earlier request: publish the current site to GitHub and Vercel
 
@@ -561,7 +569,11 @@ stress check, not a physical-device benchmark.
 - Source pixel/dimension comparisons, nine resized pixel comparisons, production
   build/TypeScript, shared geometry/reversal, responsive/touch and cache checks
   passed. Added `scripts/optimize-images.cjs` and `doc/IMAGE_OPTIMIZATION.md`.
-- GitHub and Vercel publication is in progress. Existing mobile audit gaps remain.
+- Published application commit `f807f0d`; Vercel deployment
+  `dpl_GHmeiCF233LQ69FY5cme3aCJdgHb` is READY and the GitHub check succeeded.
+- Hosted full-size files match the local SHA-256 hashes and expected immutable
+  cache headers; homepage and old PNG link return 200. A regeneration rerun made
+  no image changes. Existing mobile audit gaps remain.
 
 ## Update protocol for future AI sessions
 

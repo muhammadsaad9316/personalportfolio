@@ -23,7 +23,7 @@ are unchanged; lossless re-encoding made that already-compressed file larger.
 - `scripts/optimize-images.cjs` uses the installed Sharp package. PNG output uses
   compression level 9, adaptive filtering and no palette reduction. Full-size
   WebP output uses lossless mode with effort 6. Existing metadata is retained.
-- Before writing, the script compares complete decoded RGBA buffers and image
+- Before writing, the script compares complete decoded RGBA buffers, bit depth and image
   dimensions with the input. All six PNGs and all three full-size WebPs passed.
   SHA-256 hashes of the decoded buffers are recorded in the local result manifest.
 - Resized page previews retain PNG input and their existing quality 88. Changing
@@ -60,3 +60,9 @@ manual maintenance command, not a build or page-load step. No dependency was add
 
 Physical-device/Safari checks remain pending. This work does not fix the earlier
 mobile audit's larger-text layout, startup JavaScript or liquid-footer issues.
+
+Application commit `f807f0d` was published to GitHub main and Vercel production.
+Deployment `dpl_GHmeiCF233LQ69FY5cme3aCJdgHb` reached READY. Hosted full-size
+downloads matched the verified local files' SHA-256 hashes, returned HTTP 200 and
+had one-year immutable caching; the legacy branch PNG also returned 200.
+A second optimization run left all image files byte-identical.

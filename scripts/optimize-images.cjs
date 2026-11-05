@@ -15,6 +15,9 @@ const files = [
 ];
 
 async function verify(source, candidate) {
+  const before = await sharp(source).metadata();
+  const after = await sharp(candidate).metadata();
+  assert.equal(after.depth, before.depth, 'Image bit depth changed');
   const original = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const result = await sharp(candidate).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   assert.equal(result.info.width, original.info.width, 'Image width changed');
