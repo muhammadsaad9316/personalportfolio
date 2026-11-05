@@ -68,7 +68,11 @@ body {
 
 html {
   -webkit-text-size-adjust: 100%;
-  scrollbar-color: var(--text-muted) var(--cream);
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {

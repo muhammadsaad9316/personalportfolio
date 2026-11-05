@@ -6,13 +6,14 @@ import type { WorkHandle } from "@/components/work/Work";
 import { getLenis } from "@/components/SmoothScroll";
 import { registerStageBeat, stageReleased } from "./stageBeats";
 import {
-  DOWN_KEYS,
-  UP_KEYS,
   claimHandoff,
+  completeHandoff,
   handoffBusy,
+  isHandoffKey,
   keyStep,
   releaseHandoff,
   wheelStep,
+  type HandoffInput,
 } from "./handoff";
 
 /**
@@ -271,11 +272,11 @@ export function useWorkToCases({
 
         /* ---------------- scroll lock ---------------- */
 
-        const swallow = (event: Event) => event.preventDefault();
+        const swallow = (event: Event) => {
+          if (!(event instanceof WheelEvent && event.ctrlKey)) event.preventDefault();
+        };
         const swallowKeys = (event: KeyboardEvent) => {
-          if (DOWN_KEYS.has(event.key) || UP_KEYS.has(event.key)) {
-            event.preventDefault();
-          }
+          if (isHandoffKey(event)) event.preventDefault();
         };
 
         const unswallow = () => {
@@ -334,7 +335,7 @@ export function useWorkToCases({
               jumpTo(casesTop());
               rest();
               composite(false);
-              releaseHandoff(ID);
+              completeHandoff(ID);
             },
             onReverseComplete: () => {
               phase = "work";
@@ -342,7 +343,7 @@ export function useWorkToCases({
               jumpTo(workTop());
               rest();
               composite(false);
-              releaseHandoff(ID);
+              completeHandoff(ID);
             },
           })
           // 1. The three secondary previews fade and shrink slightly.
@@ -396,7 +397,11 @@ export function useWorkToCases({
           );
 
         /** Play the abstract timeline over a fixed number of real seconds. */
-        const pace = (seconds: number) => tl.timeScale(tl.duration() / seconds);
+        let seconds = FORWARD_TIME;
+        const pace = (duration: number) => {
+          seconds = duration;
+          return tl.timeScale(tl.duration() / duration);
+        };
 
         const forward = () => {
           if (phase !== "work" || handoffBusy(ID)) return;
@@ -421,12 +426,33 @@ export function useWorkToCases({
         };
 
         /* ---------------- intent ---------------- */
+        const input: HandoffInput = {
+          step: (direction) => {
+            if (phase === "playing" || handoffBusy(ID) || !onStage()) return false;
+            if (phase === "work" && direction > 0 && Math.abs(window.scrollY - workTop()) <= 4) {
+              forward();
+              return true;
+            }
+            if (phase === "cases" && direction < 0 && atCasesTop()) {
+              back();
+              return true;
+            }
+            return false;
+          },
+          hurry: (speed = 3) => {
+            if (phase === "playing") {
+              const scale = Math.max(Math.abs(tl.timeScale()), tl.duration() / seconds * speed);
+              tl.timeScale((tl.reversed() ? -1 : 1) * scale);
+            }
+          },
+        };
 
         const onWheel = (event: WheelEvent) => {
           /* The gate has to see every event, including the ones that arrive
              while a move is playing — those are the tail of the flick that
              started it, and letting them through would step twice. */
           const step = wheelStep(event);
+          if (event.ctrlKey) return;
           if (handoffBusy(ID)) return;
           if (phase === "playing") {
             event.preventDefault();
@@ -443,31 +469,22 @@ export function useWorkToCases({
              case this is the tail of the flick that left. */
           if (!stageReleased()) getLenis()?.stop();
           if (step === 0) return;
-          if (phase === "work" && step > 0) {
-            event.preventDefault();
-            forward();
-          } else if (phase === "cases" && step < 0 && atCasesTop()) {
-            event.preventDefault();
-            back();
-          }
+          if (input.step(step, false)) event.preventDefault();
         };
 
         const onKey = (event: KeyboardEvent) => {
-          if (event.metaKey || event.ctrlKey || event.altKey) return;
+          if (!isHandoffKey(event)) return;
           const step = keyStep(event);
           if (handoffBusy(ID) || phase === "playing") return;
           if (!onStage()) return;
           /* ...unless the story has already handed the page back, in which
              case this is the tail of the flick that left. */
-          if (!stageReleased()) getLenis()?.stop();
-          if (step === 0) return;
-          if (phase === "work" && step > 0) {
-            event.preventDefault();
-            forward();
-          } else if (phase === "cases" && step < 0 && atCasesTop()) {
-            event.preventDefault();
-            back();
+          if (!stageReleased()) {
+            getLenis()?.stop();
+            if (event.repeat) event.preventDefault();
           }
+          if (step === 0) return;
+          if (input.step(step, true)) event.preventDefault();
         };
 
         /* A resize changes both boxes. `measure` re-places the frame at the
@@ -500,12 +517,15 @@ export function useWorkToCases({
         const unregister = registerStageBeat(ID, {
           order: 1,
           reset: () => {
-            tl.pause(0);
+            releaseHandoff(ID);
+            unswallow();
+            tl.pause(0, true);
             phase = "work";
             setLeaving(false);
             composite(false);
           },
           settle,
+          input,
         });
 
         window.addEventListener("wheel", onWheel, { passive: false });

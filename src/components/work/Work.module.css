@@ -1,7 +1,7 @@
 /* Work — CSS owns layout, colour and static styling only.
    GSAP owns transform/opacity on [data-work-reveal], [data-project-motion],
    [data-centre], [data-centre-pointer], [data-centre-branch],
-   [data-centre-packet], [data-hub-dot] and the connector dash
+   [data-centre-packet], [data-hub-dot], [data-hub-hover] and the connector dash
    values, and on [data-cases-out] during the handoff to Case Studies.
    See doc/MOTION_ARCHITECTURE.md. */
 

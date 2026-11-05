@@ -5,10 +5,10 @@ import { useRef } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { getLenis } from "@/components/SmoothScroll";
 import {
-  DOWN_KEYS,
-  UP_KEYS,
   claimHandoff,
+  completeHandoff,
   handoffBusy,
+  isHandoffKey,
   keyStep,
   releaseHandoff,
   wheelStep,
@@ -352,6 +352,7 @@ export default function CaseStudies() {
         const last = chapters.length - 1;
         let chapter = 0;
         let moving = false;
+        let moveTween: gsap.core.Tween | null = null;
 
         /** Each chapter rests one viewport further down, the same way Work and
          *  the case landing do. Nothing scrubs across that range; it exists so
@@ -364,9 +365,11 @@ export default function CaseStudies() {
         /* Hold the page for the length of the step, exactly as the two section
            handoffs do. Keys are swallowed too — Lenis does not intercept the
            browser's own arrow/page-key scrolling. */
-        const swallow = (event: Event) => event.preventDefault();
+        const swallow = (event: Event) => {
+          if (!(event instanceof WheelEvent && event.ctrlKey)) event.preventDefault();
+        };
         const swallowKeys = (event: KeyboardEvent) => {
-          if (DOWN_KEYS.has(event.key) || UP_KEYS.has(event.key)) {
+          if (isHandoffKey(event)) {
             event.preventDefault();
           }
         };
@@ -396,16 +399,17 @@ export default function CaseStudies() {
           moving = true;
           claimHandoff(ID);
           hold();
-          timeline.tweenTo(next, {
+          moveTween = timeline.tweenTo(next, {
             duration: CHAPTER_TIME,
             ease: "none",
             onComplete: () => {
               chapter = next;
               moving = false;
+              moveTween = null;
               jumpTo(chapterTop(next));
               unswallow();
               getLenis()?.stop();
-              releaseHandoff(ID);
+              completeHandoff(ID);
             },
           });
         };
@@ -420,6 +424,14 @@ export default function CaseStudies() {
          *  closing sections are. */
         const onChapters = () =>
           window.scrollY >= casesTop() - 4 && window.scrollY <= lastTop() + 4;
+
+        const step = (direction: -1 | 1) => {
+          if (moving || handoffBusy(ID) || !onChapters()) return false;
+          const next = chapter + direction;
+          if (next < 0 || next > last) return false;
+          goTo(next);
+          return true;
+        };
 
         const act = (step: -1 | 0 | 1, event: Event) => {
           if (moving || handoffBusy(ID)) return;
@@ -444,7 +456,7 @@ export default function CaseStudies() {
 
         const onWheel = (event: WheelEvent) => act(wheelStep(event), event);
         const onKey = (event: KeyboardEvent) => {
-          if (event.metaKey || event.ctrlKey || event.altKey) return;
+          if (!isHandoffKey(event)) return;
           act(keyStep(event), event);
         };
 
@@ -471,11 +483,18 @@ export default function CaseStudies() {
         const unregister = registerStageBeat(ID, {
           order: 0,
           reset: () => {
+            moveTween?.kill();
+            moveTween = null;
+            unswallow();
+            releaseHandoff(ID);
             timeline.pause(0);
             chapter = 0;
             moving = false;
           },
           settle,
+          input: { step, hurry: (speed = 3) => {
+            if (moveTween) moveTween.timeScale(Math.max(moveTween.timeScale(), speed));
+          } },
         });
 
         window.addEventListener("wheel", onWheel, { passive: false });
@@ -488,6 +507,7 @@ export default function CaseStudies() {
           window.removeEventListener("keydown", onKey);
           unswallow();
           releaseHandoff(ID);
+          moveTween?.kill();
           /* Kill first, revert second: `revert()` puts the original heading
              markup back, so any tween still pointing at a line element has to
              be gone before those elements are. */

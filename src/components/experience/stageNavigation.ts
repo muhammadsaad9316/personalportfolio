@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { getLenis } from "@/components/SmoothScroll";
-import { handoffBusy } from "./handoff";
+import { handoffBusy, hurryHandoff, resetHandoff } from "./handoff";
 import {
   resetStage,
   setStageTravelling,
@@ -20,6 +20,8 @@ const HASH_DESTINATIONS: Record<string, StageDestination> = {
   "#ending": "ending",
   "#contact": "contact",
 };
+
+let lastDestination: StageDestination | null = null;
 
 function destinationTop(destination: StageDestination) {
   const stage = document.querySelector<HTMLElement>("[data-experience-stage]");
@@ -39,7 +41,15 @@ function destinationTop(destination: StageDestination) {
 /** Move into a cinematic rest; native anchors remain the touch fallback. */
 export function navigateToStage(destination: StageDestination) {
   if (!stageIsArmed()) return false;
-  restoreAt(destinationTop(destination));
+  const top = destinationTop(destination);
+  if (lastDestination === destination && Math.abs(window.scrollY - top) < 1 &&
+      !handoffBusy("stage-navigation")) {
+    resetHandoff();
+    hurryHandoff();
+    return true;
+  }
+  lastDestination = destination;
+  restoreAt(top);
   return true;
 }
 

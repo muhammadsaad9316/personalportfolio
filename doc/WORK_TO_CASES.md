@@ -8,6 +8,70 @@ Read `doc/moresimple.md` for what the move is supposed to feel like and
 approved behaviour was actually built, the numbers it runs on, and what was
 measured.
 
+### Single-scroll correction — 2026-10-24
+
+The user reproduced one physical scroll advancing two sections. A decaying stream
+at 80ms intervals was incorrectly split by the earlier 50ms gate, moving Work 900
+to 2700 instead of its intended landing 1800. Same-direction wheel repeats now
+hurry only the active move at 1.8×; they cannot queue a second forward section.
+Grouping requires 240ms quiet and rejects decaying packets across gaps below 700ms.
+Meaningful direction history persists through landings; quick reversal requires
+24px or line/page wheel units. Keyboard/navigation acceleration and safe reverse
+recovery are retained. Production replay now stops that stream at 1800, and
+tests cover tails crossing chapter completion, equal packets, reverse input and
+a fresh gesture after quiet. The first full Work entrance remains at its normal
+pace (4448ms for the decaying gesture). A separate deliberate repeat shortens the
+same entrance to 2694.9ms and still stops at Work. The 192-interval accelerated
+sample measured p95 17ms with none over 32ms. All 21 input assertions, production
+build, full reverse/replay and existing preview/responsive checks pass. See
+`.prd` for scripts and physical-device limitations.
+
+### Historical repeated input update — 2026-10-24
+
+The wheel queueing policy and measurements below describe the initial adaptive
+implementation and are superseded by the single-scroll correction above.
+
+Deliberate repeated input now hurries the current motion to 3× and retains one
+latest pending direction/source. Successful completion dispatches that request
+after a 60ms safe seam. Same-direction wheel events within 50ms remain one burst;
+they do not enqueue more steps. Cancellation/reset/media teardown clears pending
+input. This supersedes historical statements below that all input during a move
+is ignored; the flight geometry and authored single-gesture choreography remain.
+
+The Hero forward timeline now contains Work's entrance, so its owner remains held
+until the cards finish entering. Restoration/navigation settles that entrance
+immediately. Case and closing owners retain their playhead tweens for acceleration
+and cancellation. Footer glides support bounded retargeting without stale release
+callbacks. Repeated direct navigation to the same rest does not rebuild it.
+Final production checks pass deliberate double wheel/key input in both
+directions, case/closing seams, latest direction, navigation interruption,
+same-target cancellation, footer recapture and home return. The accelerated
+Hero → Work → Cases path measured 2375.4ms with p95 16.9ms across 143 RAF
+intervals and none above 32ms. Existing preview coverage/reverse geometry,
+responsive, reduced-motion, history and touch-emulation checks also pass.
+See `.prd` for scripts, complete evidence and physical-device limitations.
+
+### Hover and reverse recovery — 2026-10-24
+
+Work hover now retains one media context and retargets current transforms and
+opacity when the selected project changes. Card emphasis uses 0.32s and inactive
+opacity 0.65. Cursor following uses 0.22s; pointer entry does not recenter it.
+Work exit/reset clears active emphasis and gates new selection until entrance.
+Hover scales new `[data-hub-hover]` groups while entrance/exit keeps ownership of
+the child `[data-hub-dot]` scale. Flight ownership and geometry are unchanged.
+
+Native upward scrolling during the Contact-to-footer glide could cancel Lenis'
+completion callback, leaving the temporary input hold, `moving` flag and gesture
+owner locked. The closing transition's Contact recapture now cancels its pending
+release timer, removes the hold, clears `moving` and releases its shared owner
+before restoring the Contact rest. Independent development tests reproduce the
+old lock and verify recovery through every reverse rest to Hero and forward to
+Work. Production checks now pass that interrupted glide and the entire reverse
+sequence, hovered flagship coverage and reversal within 1px, keyboard/reduced
+motion cleanup and re-entry, and native touch reversal. A 67-frame rapid-hover
+sample measured p95 20.3ms with zero intervals over 32ms. See `.prd` for the
+scripts, complete evidence and physical-device limitations.
+
 ### Three-slide update — 2026-10-09
 
 The flagship now has exactly three slides: intro → solution → result. Problem

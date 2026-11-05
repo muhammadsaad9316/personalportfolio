@@ -71,6 +71,11 @@ When the visitor hovers over a project:
 
 The interaction should clearly show that every project is connected to a real problem and result.
 
+Switching between projects should blend from the current visual state, without
+flashing all four cards back to full brightness. Keep the other cards readable.
+The pointer label follows the actual cursor; only keyboard focus parks it on
+the selected card. Leaving Work clears that emphasis before the reverse exit.
+
 ## Work to Case Studies Transition
 
 When the visitor finishes the Work section and continues scrolling:
@@ -105,7 +110,11 @@ The supplied product screenshots are uncovered in place: the next one is reveale
 
 The copy on the right assembles rather than appearing as a block, and it leaves with the screenshot it belongs to. The label wipes in from the left, the title rises line by line out of its own edge — the same gesture the screenshot beside it is making — then the sentence and the facts follow. It leaves as one block, quickly: the entrance is the part worth watching.
 
-Each chapter advances on one scroll gesture, never by scroll distance, so a hard flick and a gentle nudge both move exactly one chapter. Touch and reduced-motion modes show the same content as an ordinary stacked case study with no prolonged pinning.
+Each chapter advances on one scroll gesture, never by scroll distance, so a hard flick and a gentle nudge both request one chapter. A deliberate same-direction wheel repeat can speed up the current move, but must never silently queue another section. Advancing again requires a fresh scroll after landing. Explicit repeated navigation keys can retain one next step; a deliberate direction reversal can replace it. Momentum, including pauses in its decaying tail, must neither speed up the first move nor race through the story. Touch and reduced-motion modes show the same content as an ordinary stacked case study with no prolonged pinning.
+
+Navigation should respond to intent immediately. Repeated activation of the same
+destination must not restart its entrance; a different destination cancels the
+old journey. A second Back to top activation shortens the current return.
 
 This case study should feel impressive, but it should not require too much scrolling.
 

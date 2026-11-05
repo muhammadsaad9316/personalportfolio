@@ -15,13 +15,16 @@ import {
   setStageTravelling,
   settleStage,
   stageIsArmed,
+  stageTravelling,
 } from "@/components/experience/stageBeats";
+import { claimHandoff, completeHandoff, registerHandoffInput } from "@/components/experience/handoff";
 import { navigateToStage } from "@/components/experience/stageNavigation";
 import { NAV_LINKS, SOCIAL_LINKS } from "@/components/contact/siteLinks";
 import FooterFluid from "./FooterFluid";
 import styles from "./SiteFooter.module.css";
 
 const MOTION = "(min-width: 900px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const HOME_HANDOFF = "back-to-top";
 
 const reducedMotion = () =>
   typeof window !== "undefined" &&
@@ -114,35 +117,62 @@ export default function SiteFooter() {
    * its opening state, instead of rewinding through six viewports of pinned
    * timelines that were never scrub-linked in the first place.
    */
-  const backToTop = () => {
-    if (stageIsArmed()) resetStage();
+  const returningHome = useRef(false);
+  const homeHurried = useRef(false);
+  const lastHomePress = useRef(-Infinity);
+  const glideHome = (fast: boolean) => {
+    if (fast && returningHome.current && stageTravelling() && homeHurried.current) return;
+    if (!returningHome.current || !stageTravelling()) {
+      homeHurried.current = false;
+      if (stageIsArmed()) resetStage();
+    }
 
     const lenis = getLenis();
     if (lenis && !reducedMotion()) {
+      returningHome.current = true;
+      homeHurried.current = fast;
       /* The glide crosses the stage boundary on its way home, and the boundary
          watcher in `case-featured` cannot tell a deliberate journey from the
          page arriving below the story by accident. Left unflagged it grabbed
          this glide at the last chapter and parked it there — measured: it
          stopped at 3522 instead of 0. */
       setStageTravelling(true);
+      claimHandoff(HOME_HANDOFF);
       lenis.start();
       /* `lock` keeps a stray flick from hijacking the glide, the same way every
          beat on the stage holds the page while it plays. */
       lenis.scrollTo(0, {
-        duration: 1.45,
+        duration: fast ? 0.36 : 1.45,
+        force: true,
         lock: true,
         onComplete: () => {
+          returningHome.current = false;
           setStageTravelling(false);
           /* Home is a rest position like any other, so let each beat take the
              page still again exactly as it would on a reload here. */
           settleStage();
+          completeHandoff(HOME_HANDOFF);
         },
       });
       return;
     }
+    returningHome.current = false;
     setStageTravelling(false);
-    window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+    window.scrollTo({ top: 0, behavior: fast || reducedMotion() ? "auto" : "smooth" });
   };
+  const backToTop = () => {
+    const at = performance.now();
+    const fast = at - lastHomePress.current < 700 || (returningHome.current && stageTravelling());
+    lastHomePress.current = at;
+    glideHome(fast);
+  };
+
+  useGSAP(() => registerHandoffInput(HOME_HANDOFF, {
+    step: () => false,
+    hurry: () => {
+      if (returningHome.current && stageTravelling()) glideHome(true);
+    },
+  }), { scope: rootRef });
 
   /** Rebuild the stage at that beat instead of jumping into its sticky DOM. */
   const goToBeat =

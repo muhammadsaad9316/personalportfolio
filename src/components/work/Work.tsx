@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -36,7 +37,7 @@ const HUB_DOTS = PROJECTS.map((p) => CONNECTORS[p.placement].hub);
 export type WorkHandle = {
   /** Play the documented entrance: text, then centre, then lines, then
    *  projects. */
-  enter: (speed?: number) => void;
+  enter: (speed?: number) => gsap.core.Timeline;
   /** Build the exit for the return to Hero: projects first, lines retracting
    *  toward the centre, the circle shrinking, heading last. */
   exit: () => gsap.core.Timeline;
@@ -52,17 +53,35 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
   const labelRef = useRef<HTMLDivElement>(null);
   // React owns only the discrete state. Pointer coordinates stay in GSAP.
   const [active, setActive] = useState<number | null>(null);
+  const activeRef = useRef<number | null>(null);
+  const interactiveRef = useRef(true);
+  const clearActive = useCallback(() => {
+    activeRef.current = null;
+    setActive(null);
+  }, []);
   /** The timeline half of the handle. `clearActive` is React state, so it
    *  lives on the imperative handle directly rather than in here. */
   const api = useRef<Pick<WorkHandle, "enter" | "exit" | "reset"> | null>(null);
   useImperativeHandle(ref, () => ({
-    enter: (speed?: number) => api.current?.enter(speed),
-    exit: () => api.current?.exit() ?? gsap.timeline(),
-    reset: () => api.current?.reset(),
-    clearActive: () => setActive(null),
+    enter: (speed?: number) => {
+      interactiveRef.current = true;
+      return api.current?.enter(speed) ?? gsap.timeline();
+    },
+    exit: () => {
+      interactiveRef.current = false;
+      clearActive();
+      return api.current?.exit() ?? gsap.timeline();
+    },
+    reset: () => {
+      interactiveRef.current = false;
+      clearActive();
+      api.current?.reset();
+    },
+    clearActive,
   }));
   type Setter = ReturnType<typeof gsap.quickTo>;
   const labelXY = useRef<{ x: Setter; y: Setter } | null>(null);
+  const animateActive = useRef<((index: number | null) => void) | null>(null);
 
   /* ------------------------------------------------------------------
    * Entrance: heading -> centre -> lines -> projects.  One timeline,
@@ -219,6 +238,7 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
             enter: (speed = 1) => {
               running?.kill();
               running = buildEnter().timeScale(speed).play(0);
+              return running;
             },
             exit: () => {
               running?.kill();
@@ -250,8 +270,8 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
         if (!label) return;
 
         labelXY.current = {
-          x: gsap.quickTo(label, "x", { duration: 0.42, ease: "power3" }),
-          y: gsap.quickTo(label, "y", { duration: 0.42, ease: "power3" }),
+          x: gsap.quickTo(label, "x", { duration: 0.22, ease: "power3.out" }),
+          y: gsap.quickTo(label, "y", { duration: 0.22, ease: "power3.out" }),
         };
 
         const onMove = (event: PointerEvent) => {
@@ -286,7 +306,7 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
       if (!root) return;
 
       const mm = gsap.matchMedia();
-      mm.add(CINEMATIC, () => {
+      mm.add(CINEMATIC, (context) => {
         const cards = Array.from(
           root.querySelectorAll<HTMLElement>("[data-project-motion]"),
         );
@@ -294,169 +314,209 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
           root.querySelectorAll<SVGGElement>("[data-trace-active]"),
         );
         const dots = Array.from(
-          root.querySelectorAll<SVGCircleElement>("[data-hub-dot]"),
+          root.querySelectorAll<SVGGElement>("[data-hub-hover]"),
         );
         const centre = root.querySelector<SVGGElement>("[data-centre-pointer]");
         const branch = root.querySelector<SVGGElement>("[data-centre-branch]");
         const packet = root.querySelector<SVGRectElement>("[data-centre-packet]");
         const label = labelRef.current;
-        const reduced = window.matchMedia(
-          "(prefers-reduced-motion: reduce)",
-        ).matches;
-        const d = reduced ? 0.001 : 0.45;
 
-        cards.forEach((card, i) => {
-          const isActive = active === i;
-          const quiet = active !== null && !isActive;
-          gsap.to(card, {
-            scale: isActive ? 1.035 : 1,
-            autoAlpha: quiet ? 0.45 : 1,
-            duration: d,
-            ease: "power3.out",
+        gsap.set(cards, { scale: 1, autoAlpha: 1 });
+        gsap.set(dots, { scale: 1, transformOrigin: "center center" });
+        if (centre) gsap.set(centre, { x: 0, y: 0, rotation: 0 });
+        traces.forEach((trace) => {
+          trace.querySelectorAll<SVGPathElement>("[data-connector-active]")
+            .forEach((path) => {
+              const length = path.getTotalLength();
+              gsap.set(path, { strokeDasharray: length, strokeDashoffset: length });
+            });
+          gsap.set(trace.querySelectorAll("[data-trace-node-active]"), {
+            scale: 0,
+            autoAlpha: 0,
+            transformOrigin: "center center",
+          });
+          gsap.set(trace.querySelectorAll("[data-trace-packet], [data-trace-pulse]"), {
+            autoAlpha: 0,
           });
         });
+        if (branch) gsap.set(branch, { scaleX: 0, transformOrigin: "left center" });
+        if (packet) gsap.set(packet, { autoAlpha: 0 });
 
-        traces.forEach((trace, i) => {
-          const isActive = active === i;
-          const paths = Array.from(
-            trace.querySelectorAll<SVGPathElement>("[data-connector-active]"),
-          );
-          paths.forEach((path) => {
-            const len = path.getTotalLength();
-            gsap.to(path, {
-              strokeDasharray: len,
-              strokeDashoffset: isActive ? 0 : len,
-              duration: reduced ? 0.001 : 0.55,
-              ease: "power2.inOut",
+        // Keep one media context: switching projects must not revert the live frame.
+        const update = context.add("updateActive", (active: number | null) => {
+          if (!window.matchMedia(CINEMATIC).matches) return;
+          const d = 0.32;
+
+          cards.forEach((card, i) => {
+            const isActive = active === i;
+            const quiet = active !== null && !isActive;
+            gsap.to(card, {
+              scale: isActive ? 1.035 : 1,
+              autoAlpha: quiet ? 0.65 : 1,
+              duration: d,
+              ease: "power3.out",
               overwrite: "auto",
             });
           });
 
-          gsap.to(trace.querySelectorAll("[data-trace-node-active]"), {
-            scale: isActive ? 1 : 0,
-            autoAlpha: isActive ? 1 : 0,
-            duration: reduced ? 0.001 : 0.3,
-            stagger: isActive ? 0.035 : 0,
-            ease: "power3.out",
-            transformOrigin: "center center",
-            overwrite: "auto",
+          traces.forEach((trace, i) => {
+            const isActive = active === i;
+            const paths = Array.from(
+              trace.querySelectorAll<SVGPathElement>("[data-connector-active]"),
+            );
+            paths.forEach((path) => {
+              const len = path.getTotalLength();
+              gsap.to(path, {
+                strokeDasharray: len,
+                strokeDashoffset: isActive ? 0 : len,
+                duration: 0.4,
+                ease: "power2.inOut",
+                overwrite: "auto",
+              });
+            });
+
+            gsap.to(trace.querySelectorAll("[data-trace-node-active]"), {
+              scale: isActive ? 1 : 0,
+              autoAlpha: isActive ? 1 : 0,
+              duration: 0.24,
+              stagger: isActive ? 0.035 : 0,
+              ease: "power3.out",
+              transformOrigin: "center center",
+              overwrite: "auto",
+            });
+
+            const packet = trace.querySelector<SVGRectElement>("[data-trace-packet]");
+            const pulse = trace.querySelector<SVGCircleElement>("[data-trace-pulse]");
+            const main = trace.querySelector<SVGPathElement>("[data-trace-main]");
+            if (packet) {
+              gsap.killTweensOf(packet);
+              gsap.set(packet, { x: 0, y: 0, autoAlpha: 0 });
+            }
+            if (pulse) {
+              gsap.killTweensOf(pulse);
+              gsap.set(pulse, { scale: 0.7, autoAlpha: 0 });
+            }
+            if (isActive && packet && pulse && main) {
+              gsap.fromTo(
+                packet,
+                { autoAlpha: 1 },
+                {
+                  autoAlpha: 0,
+                  duration: 0.58,
+                  ease: "power2.inOut",
+                  motionPath: {
+                    path: main,
+                    align: main,
+                    alignOrigin: [0.5, 0.5],
+                  },
+                  overwrite: true,
+                },
+              );
+              gsap.fromTo(
+                pulse,
+                { scale: 0.7, autoAlpha: 1 },
+                {
+                  scale: 2,
+                  autoAlpha: 0,
+                  delay: 0.48,
+                  duration: 0.34,
+                  ease: "power2.out",
+                  transformOrigin: "center center",
+                  overwrite: true,
+                },
+              );
+            }
           });
 
-          const packet = trace.querySelector<SVGRectElement>("[data-trace-packet]");
-          const pulse = trace.querySelector<SVGCircleElement>("[data-trace-pulse]");
-          const main = trace.querySelector<SVGPathElement>("[data-trace-main]");
+          dots.forEach((dot, i) => {
+            gsap.to(dot, {
+              scale: active === i ? 1.9 : 1,
+              duration: d,
+              ease: "power3.out",
+              transformOrigin: "center center",
+              overwrite: "auto",
+            });
+          });
+
+          if (centre) {
+            const lean =
+              active === null
+                ? { x: 0, y: 0, rotate: 0 }
+                : CENTRE_LEAN[PROJECTS[active].placement];
+            gsap.to(centre, {
+              x: lean.x,
+              y: lean.y,
+              rotation: `${lean.rotate}_short`,
+              duration: 0.42,
+              ease: "power3.out",
+              transformOrigin: "center center",
+              overwrite: "auto",
+            });
+          }
+
+          if (branch) {
+            gsap.to(branch, {
+              scaleX: active === null ? 0 : 1,
+              duration: 0.28,
+              ease: active === null ? "power2.in" : "power3.out",
+              transformOrigin: "left center",
+              overwrite: "auto",
+            });
+          }
+
           if (packet) {
             gsap.killTweensOf(packet);
-            gsap.set(packet, { x: 0, y: 0, autoAlpha: 0 });
-          }
-          if (pulse) {
-            gsap.killTweensOf(pulse);
-            gsap.set(pulse, { scale: 0.7, autoAlpha: 0 });
-          }
-          if (isActive && !reduced && packet && pulse && main) {
-            gsap.fromTo(
-              packet,
-              { autoAlpha: 1 },
-              {
-                autoAlpha: 0,
-                duration: 0.58,
-                ease: "power2.inOut",
-                motionPath: {
-                  path: main,
-                  align: main,
-                  alignOrigin: [0.5, 0.5],
+            if (active === null) {
+              gsap.set(packet, { x: 0, autoAlpha: 0 });
+            } else {
+              gsap.fromTo(
+                packet,
+                { x: 0, autoAlpha: 1 },
+                {
+                  x: 26,
+                  autoAlpha: 0,
+                  duration: 0.46,
+                  ease: "power2.inOut",
+                  overwrite: true,
                 },
-                overwrite: true,
-              },
-            );
-            gsap.fromTo(
-              pulse,
-              { scale: 0.7, autoAlpha: 1 },
-              {
-                scale: 2,
-                autoAlpha: 0,
-                delay: 0.48,
-                duration: 0.34,
-                ease: "power2.out",
-                transformOrigin: "center center",
-                overwrite: true,
-              },
-            );
+              );
+            }
           }
-        });
 
-        dots.forEach((dot, i) => {
-          gsap.to(dot, {
-            scale: active === i ? 1.9 : 1,
-            duration: d,
-            ease: "power3.out",
-            transformOrigin: "center center",
-          });
-        });
-
-        if (centre) {
-          const lean =
-            active === null
-              ? { x: 0, y: 0, rotate: 0 }
-              : CENTRE_LEAN[PROJECTS[active].placement];
-          gsap.to(centre, {
-            x: lean.x,
-            y: lean.y,
-            rotation: `${lean.rotate}_short`,
-            duration: reduced ? 0.001 : 0.6,
-            ease: "power3.out",
-            transformOrigin: "center center",
-            overwrite: "auto",
-          });
-        }
-
-        if (branch) {
-          gsap.to(branch, {
-            scaleX: active === null ? 0 : 1,
-            duration: reduced ? 0.001 : 0.38,
-            ease: active === null ? "power2.in" : "power3.out",
-            transformOrigin: "left center",
-            overwrite: "auto",
-          });
-        }
-
-        if (packet) {
-          gsap.killTweensOf(packet);
-          if (active === null || reduced) {
-            gsap.set(packet, { x: 0, autoAlpha: 0 });
-          } else {
-            gsap.fromTo(
-              packet,
-              { x: 0, autoAlpha: 1 },
-              {
-                x: 26,
-                autoAlpha: 0,
-                duration: 0.46,
-                ease: "power2.inOut",
-                overwrite: true,
-              },
-            );
+          if (label) {
+            const tracked = labelXY.current !== null;
+            gsap.to(label, {
+              autoAlpha: active === null || !tracked ? 0 : 1,
+              scale: active === null || !tracked ? 0.85 : 1,
+              duration: 0.2,
+              ease: "power2.out",
+              overwrite: "auto",
+            });
           }
-        }
+        }) as (index: number | null) => void;
+        animateActive.current = update;
+        update(activeRef.current);
 
-        if (label) {
-          const tracked = labelXY.current !== null;
-          gsap.to(label, {
-            autoAlpha: active === null || !tracked ? 0 : 1,
-            scale: active === null || !tracked ? 0.85 : 1,
-            duration: reduced ? 0.001 : 0.3,
-            ease: "power2.out",
-          });
-        }
+        return () => {
+          if (animateActive.current === update) animateActive.current = null;
+          gsap.killTweensOf(cards);
+          gsap.set(cards, { clearProps: "transform,opacity,visibility" });
+        };
       });
       return () => mm.revert();
     },
-    { scope: rootRef, dependencies: [active], revertOnUpdate: true },
+    { scope: rootRef },
   );
+
+  useEffect(() => {
+    activeRef.current = active;
+    animateActive.current?.(active);
+  }, [active]);
 
   /** Keyboard focus produces the identical state, and parks the label on
    *  the focused card so it does not need a pointer to be positioned. */
   const focusProject = useCallback((index: number, el: HTMLElement | null) => {
+    if (!interactiveRef.current) return;
     setActive(index);
     const box = rootRef.current
       ?.querySelector("[data-network]")
@@ -658,14 +718,15 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
                   r="5.5"
                 />
                 {HUB_DOTS.map(([x, y], i) => (
-                  <circle
-                    key={i}
-                    data-hub-dot
-                    className={styles.hubDot}
-                    cx={x}
-                    cy={y}
-                    r="6"
-                  />
+                  <g key={i} data-hub-hover>
+                    <circle
+                      data-hub-dot
+                      className={styles.hubDot}
+                      cx={x}
+                      cy={y}
+                      r="6"
+                    />
+                  </g>
                 ))}
               </g>
             </svg>
@@ -677,7 +738,10 @@ const Work = forwardRef<WorkHandle>(function Work(_props, ref) {
                 key={project.id}
                 project={project}
                 index={i}
-                onEnter={focusProject}
+                onEnter={(index) => {
+                  if (interactiveRef.current) setActive(index);
+                }}
+                onFocus={focusProject}
                 onLeave={() => setActive(null)}
               />
             ))}
@@ -720,11 +784,13 @@ function ProjectCard({
   project,
   index,
   onEnter,
+  onFocus,
   onLeave,
 }: {
   project: Project;
   index: number;
-  onEnter: (index: number, el: HTMLElement | null) => void;
+  onEnter: (index: number) => void;
+  onFocus: (index: number, el: HTMLElement | null) => void;
   onLeave: () => void;
 }) {
   const linkRef = useRef<HTMLAnchorElement>(null);
@@ -749,9 +815,9 @@ function ProjectCard({
               if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
               if (flagship && navigateToStage("cases")) event.preventDefault();
             }}
-            onMouseEnter={() => onEnter(index, linkRef.current)}
+            onMouseEnter={() => onEnter(index)}
             onMouseLeave={onLeave}
-            onFocus={() => onEnter(index, linkRef.current)}
+            onFocus={() => onFocus(index, linkRef.current)}
             onBlur={onLeave}
           >
             <span

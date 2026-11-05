@@ -7,13 +7,14 @@ import type { WorkHandle } from "@/components/work/Work";
 import { getLenis } from "@/components/SmoothScroll";
 import { registerStageBeat } from "./stageBeats";
 import {
-  DOWN_KEYS,
-  UP_KEYS,
   claimHandoff,
+  completeHandoff,
   handoffBusy,
+  isHandoffKey,
   keyStep,
   releaseHandoff,
   wheelStep,
+  type HandoffInput,
 } from "./handoff";
 
 /**
@@ -159,11 +160,11 @@ export function useHeroToWork({
           };
 
           /* ---------------- scroll lock ---------------- */
-          const swallow = (event: Event) => event.preventDefault();
+          const swallow = (event: Event) => {
+            if (!(event instanceof WheelEvent && event.ctrlKey)) event.preventDefault();
+          };
           const swallowKeys = (event: KeyboardEvent) => {
-            if (DOWN_KEYS.has(event.key) || UP_KEYS.has(event.key)) {
-              event.preventDefault();
-            }
+            if (isHandoffKey(event)) event.preventDefault();
           };
 
           const hold = () => {
@@ -248,7 +249,7 @@ export function useHeroToWork({
                 phase = "work";
                 running = null;
                 rest();
-                releaseHandoff(ID);
+                completeHandoff(ID);
               },
             });
 
@@ -300,10 +301,10 @@ export function useHeroToWork({
                 { autoAlpha: 0, duration: F_CLEAR_DUR, ease: "power2.out" },
                 F_CLEAR_AT,
               )
-              .add(() => {
-                work.current?.enter();
-                entered = true;
-              }, F_CLEAR_AT + 0.05);
+              // The entrance stays inside this owner so a faster handoff
+              // cannot leave cards entering underneath the case-study flight.
+              .add(work.current?.enter() ?? gsap.timeline(), F_CLEAR_AT + 0.05);
+            entered = true;
 
             return tl;
           };
@@ -315,7 +316,7 @@ export function useHeroToWork({
                 phase = "hero";
                 running = null;
                 rest();
-                releaseHandoff(ID);
+                completeHandoff(ID);
               },
             });
 
@@ -390,6 +391,23 @@ export function useHeroToWork({
 
           /* ---------------- intent ---------------- */
           const atWorkTop = () => window.scrollY <= workTop() + 4;
+          const input: HandoffInput = {
+            step: (direction) => {
+              if (handoffBusy(ID) || phase === "playing") return false;
+              if (phase === "hero" && direction > 0 && window.scrollY <= 4) {
+                forward();
+                return true;
+              }
+              if (phase === "work" && direction < 0 && atWorkTop()) {
+                back();
+                return true;
+              }
+              return false;
+            },
+            hurry: (speed = 3) => {
+              if (running) running.timeScale(Math.max(running.timeScale(), speed));
+            },
+          };
 
           const onWheel = (event: WheelEvent) => {
             /* `work-to-cases` runs from the landing of this one and holds the
@@ -401,32 +419,24 @@ export function useHeroToWork({
                events that arrive mid-move, because those are exactly the ones
                that must not be allowed to queue up a second step. */
             const step = wheelStep(event);
+            if (event.ctrlKey) return;
             if (handoffBusy(ID)) return;
             if (phase === "playing") {
               event.preventDefault();
               return;
             }
             if (step === 0) return;
-            if (phase === "hero" && step > 0) {
-              event.preventDefault();
-              forward();
-            } else if (phase === "work" && step < 0 && atWorkTop()) {
-              event.preventDefault();
-              back();
-            }
+            if (input.step(step, false)) event.preventDefault();
           };
 
           const onKey = (event: KeyboardEvent) => {
-            if (event.metaKey || event.ctrlKey || event.altKey) return;
+            if (!isHandoffKey(event)) return;
             const step = keyStep(event);
-            if (handoffBusy(ID) || step === 0) return;
-            if (phase === "hero" && step > 0) {
+            if (event.repeat && window.scrollY <= workTop() + 4 && !handoffBusy(ID)) {
               event.preventDefault();
-              forward();
-            } else if (phase === "work" && step < 0 && atWorkTop()) {
-              event.preventDefault();
-              back();
             }
+            if (handoffBusy(ID) || step === 0) return;
+            if (input.step(step, true)) event.preventDefault();
           };
 
           /** Tabbing into Work from the hero must not scroll past the
@@ -442,7 +452,7 @@ export function useHeroToWork({
               jumpTo(workTop());
               hero.current?.setAmbient(false);
               if (!entered) {
-                work.current?.enter();
+                work.current?.enter().progress(1);
                 entered = true;
               }
               rest();
@@ -456,7 +466,7 @@ export function useHeroToWork({
               gsap.set([heroInner, scene], { autoAlpha: 0 });
               hero.current?.setAmbient(false);
               if (!entered) {
-                work.current?.enter();
+                work.current?.enter().progress(1);
                 entered = true;
               }
             }
@@ -472,6 +482,8 @@ export function useHeroToWork({
           const unregister = registerStageBeat(ID, {
             order: 2,
             reset: () => {
+              releaseHandoff(ID);
+              unswallow();
               running?.kill();
               running = null;
               phase = "hero";
@@ -482,6 +494,7 @@ export function useHeroToWork({
               hero.current?.setAmbient(true);
             },
             settle,
+            input,
           });
 
           window.addEventListener("wheel", onWheel, { passive: false });

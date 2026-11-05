@@ -1,6 +1,6 @@
 # Abdullah portfolio — living PRD and AI handoff
 
-Last updated: 2026-10-09. This file records the user's requested changes and the current implementation state. Read it at the start of a new AI session, then follow `AGENTS.md` and the architecture documents. Keep it current as work is completed; do not treat an in-progress item as verified or finished.
+Last updated: 2026-11-05. This file records the user's requested changes and the current implementation state. Read it at the start of a new AI session, then follow `AGENTS.md` and the architecture documents. Keep it current as work is completed; do not treat an in-progress item as verified or finished.
 
 ## Read order and constraints
 
@@ -14,7 +14,215 @@ Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-
 
 The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. No dependencies or commits have been added for the changes below. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
 
-## Latest request: implement the optimization and mobile recommendations
+## Latest request: publish the current site to GitHub and Vercel
+
+On 2026-11-05 the user authorized pushing the current site and deploying it live.
+Release scope includes the existing Work hover/reverse/input repairs, hidden
+page scrollbar, regression scripts and mobile audit. The current application
+passed its isolated production build, TypeScript, 35 touch-layout checks and
+21/21 handoff input assertions. The audit's remaining larger-text, startup and
+liquid-footer issues are documented and are not fixed by this release.
+
+GitHub target: `muhammadsaad9316/personalportfolio`, branch `main`. Created and
+linked Vercel project `personalportfolio` under `muhammadsaad9316s-projects`,
+using Next.js and Node 24.x. Production domain assigned by Vercel:
+`https://personalportfolio-ten-red.vercel.app`. Configured that origin as
+`NEXT_PUBLIC_SITE_URL` for production metadata and sitemap generation.
+The older Vercel project `personal-portfolio` is connected to a different
+repository and must remain untouched. Publishing and live verification are
+in progress; do not treat the domain as verified live until the release completes.
+
+## Earlier request: check whether the site is fully mobile optimized
+
+On 2026-11-05 the user requested a mobile-readiness audit. No application code
+was changed for this audit. The current working tree passed an isolated production
+build, TypeScript, 35 touch-layout route/viewport checks, touch navigation,
+screenshot enlargement, reduced motion, and no-JavaScript content checks.
+Mobile Lighthouse accessibility/best-practices/SEO scored 100/100/100.
+
+Verdict: ordinary mobile use works well, but optimization is incomplete.
+At 390px with 200% root text sizing the hero headline clips visibly; supporting
+copy also reaches the dark portrait ground. Fresh-cache CPU 4× / 1.6Mbps / 150ms
+home loads measured LCP 2.856s and 4.864s, with 194.8 KiB JS transferred and CLS 0.
+The project index measured LCP 3.088s; one detail page measured 1.532s.
+The touch liquid footer showed poor frames before its static fallback: p95
+83.4ms in the first sample and 33.4ms in a repeat. The repeat's post-fallback
+p95 was 16.9ms, versus 16.8ms with reduced motion. These are local lab results,
+not device/field measurements or a proven regression against October results.
+
+See `doc/MOBILE_AUDIT_2026-11-05.md` for findings, fix candidates, source links,
+limitations and evidence under `.shots/mobile-audit-2026-11-05`. Priorities are
+larger-text hero layout, desktop-motion bundle isolation/startup profiling, and
+earlier/lower-cost touch footer adaptation. Physical Android/iPhone/Safari,
+real OS text sizing, reliable pinch testing, hosted behavior and field INP remain
+pending. The approved single-frame footer target is also exceeded on 320×568
+and 844×390, although all footer content stays readable and scrollable.
+No dependencies, commits or deployment were added.
+
+## Earlier request: hide the page scrollbar
+
+On 2026-11-05 the user requested that the side scrollbar be invisible.
+`src/app/globals.css` now hides the root scrollbar with `scrollbar-width: none`
+and an `html::-webkit-scrollbar` fallback. The document remains scrollable;
+scroll handlers and animation ownership are unchanged.
+
+Local Chrome Playwright checks passed at 1440×900: wheel input landed at Work
+(900px), then PageDown reached Case Studies (1800px). Reduced-motion PageDown
+retained native scrolling. At 390×844 with touch emulation, a swipe scrolled
+783.33px. All three modes reported hidden scrollbar styling, zero scrollbar
+gutter and no horizontal overflow; no runtime errors occurred. Whitespace checks
+passed. Firefox, Safari and physical devices remain untested for this CSS change.
+No dependencies, commits or deployment were added.
+
+## Earlier request: correct single-scroll double stepping and first-move pacing
+
+On 2026-10-24 the user reported that one scroll was moving two sections and
+making the first transition too fast. The earlier 50ms classifier was wrong for
+gapped momentum: one decaying stream `[180,120,80,45,24,12,5]` at 80ms intervals
+moved Work from 900 to 2700 instead of the intended Case Studies landing at 1800.
+
+Implemented and verified in the local production build:
+
+- A same-direction wheel repeat can hurry the current move at a restrained 1.8×,
+  but never queues another forward section while moving or settling. Keyboard
+  presses and deliberate reversals retain the bounded latest-request behavior;
+  navigation taps still avoid restarting entrances.
+- Wheel grouping now requires 240ms quiet and rejects decreasing packets across
+  gaps below 700ms. Tiny opposite-sign noise does not replace the last meaningful
+  direction. Quick deliberate reversals require 24px or line/page wheel units.
+  Wheel history survives completion so a tail crossing a landing stays grouped.
+- A decaying first scroll retains its original authored pace. Hurrying cannot
+  slow a timeline that an explicit keyboard action has already accelerated.
+- Added `scripts/single-scroll-check.js`; expanded physical-stream unit fixtures
+  and updated adaptive checks to require wheel repeats to stay at one boundary.
+  All 21 input assertion groups pass, including gapped decaying tails crossing
+  completion, equal-strength packets, noisy signs, unit modes and fresh gestures.
+
+Final production evidence: `single-scroll-check.js` passed one-section Hero/Work
+movement, a tail continuing after a chapter landed, reverse movement, equal
+80ms wheel packets and a fresh gesture after quiet. The decaying first gesture
+completed the full Work entrance in 4448ms, preserving its authored pace. The
+reproduced Work 900 → 2700 bug now ends at the intended landing 1800.
+
+Updated `adaptive-input-check.js` passed restrained wheel hurrying at one boundary,
+explicit double-key navigation, closing seams, direction replacement, navigation
+cancellation, same-target pending cancellation, double Back to top and footer
+reverse recapture. A normal first entrance measured 4489.4ms; a deliberate second
+wheel gesture shortened that same entrance to 2694.9ms while still stopping at
+Work. Its 192-interval sample measured p95 17ms, with none above 32ms. The existing
+full reverse/replay, interrupted-footer recovery, hovered preview coverage,
+reverse geometry within 1px and responsive 320/390/768/1024px checks pass. Build,
+TypeScript and whitespace checks pass. No runtime errors were found.
+
+These are local Chrome lab results. Physical-device/Safari checks remain pending;
+the conservative classifier is covered by replayed wheel traces rather than a
+recording from the user's exact hardware. No dependencies, commits or deployment
+were added. Refresh an already-open production preview tab to load this build.
+
+## Earlier request: adapt to repeated scrolling and navigation input
+
+The initial wheel policy and measurements in this section are historical and
+superseded by the single-scroll correction above. Its tests missed real gapped,
+decaying momentum; the keyboard/navigation/cancellation fixes remain relevant.
+
+On 2026-10-24 the user requested faster, professional responses to deliberate
+double scrolls, repeated navigation keys and double taps on navigation controls.
+This supersedes the earlier rule that input during a playing beat is discarded.
+
+Implemented and verified in the local production build:
+
+- A fresh second gesture accelerates the active owner to 3× and retains one
+  latest directional request for the next settled seam. Changing direction
+  replaces that pending request. Events within one 50ms wheel burst are momentum;
+  they do not multiply steps. Delivery waits 60ms after successful completion.
+- `handoff.ts` coordinates intent/ownership only. Existing section owners expose
+  their own `step` and `hurry` callbacks through `stageBeats.ts`; they retain all
+  animation ownership. Successful completion and cancellation are separate paths.
+- Hero owns the full nested Work entrance, so queued case travel cannot overlap
+  cards still entering. Deep-link/focus restoration settles Work immediately.
+  Case/closing playhead tweens are retained, accelerated and killed on reset.
+- Navigation cancels old motion/requests; repeated navigation to the same landed
+  destination does not rebuild its entrance. Footer release and Back to top can
+  hurry their existing glides. Back to top also supports a faster second native
+  activation. Touch scrolling and reduced-motion document flow remain native.
+- Memoized key/wheel decisions prevent duplicate delivery across listeners.
+  Editable controls, modified keys, native Space activation and pinch intent
+  bypass the gesture gate. Auto-repeat cannot create an unbounded queue.
+- `scripts/handoff-input-check.cjs` passes 10 assertion groups. Independent browser
+  checks passed accelerated forward/reverse travel and a 130-event momentum burst
+  advancing only one section. TypeScript and the production build pass.
+
+Final production evidence: `scripts/adaptive-input-check.js` passed single and
+double wheel input, double keyboard input through chapters/closing panels,
+reverse travel, latest-direction replacement, cancellation during navigation,
+same-target navigation at a pending seam, double Back to top, navigation during
+the home glide and a queued reverse from the footer. Browser checks also confirm
+pinch/zoom remains available during Hero and shared-frame motion; held keys stay
+within held beats and remain native in the released footer.
+
+The normal Hero-to-Work entrance measured 4471ms; two deliberate scrolls reached
+the next Case Studies rest in 2375.4ms. Double Back to top measured 519.4ms.
+The accelerated desktop sample had 143 RAF intervals, p95 16.9ms and none over
+32ms. The existing hover regression passed again (65 frames, p95 19.2ms, none
+over 32ms), as did interrupted-footer reverse recovery, full reverse/replay,
+the shared preview covering its case slot and reversing within 1px, responsive
+checks at 320/390/768/1024px, and navigation/history/reload/reduced-motion checks.
+No runtime errors occurred in these checks.
+
+Separate final checks passed reduced-motion activation with a move/next step
+pending and subsequent reverse after re-entry. Touch emulation at 390×844 kept
+native upward scrolling (1800 → 1515.33), readable cards, zero horizontal overflow
+and a successful double native Back to top activation. These are local Chrome
+lab results; physical phones and Safari remain untested. No dependencies,
+commits or deployment were added.
+
+## Completed request: repair Work hover and backward navigation
+
+On 2026-10-24 the user reported poor project hover transitions, especially
+switching between the four Work cards, then requested a check/fix for animations
+stopping while travelling backward from the bottom. Multiple agents inspected
+hover lifecycle and reverse navigation independently.
+
+Implemented and verified in the local production build:
+
+- `src/components/work/Work.tsx`: one persistent media context retargets hover
+  tweens from their current values instead of reverting on every React selection
+  change. The reproduced baseline jumped 0.55 opacity in one rendered frame.
+  Cards now use a 0.32s emphasis and 0.65 inactive opacity; the cursor follows
+  the pointer in 0.22s without first jumping toward each card's centre.
+- Keyboard focus still selects projects. Media cleanup clears exclusively
+  hover-owned card transforms/opacity/visibility. Hover is gated and cleared
+  during Work exit/reset. New `[data-hub-hover]` groups separate hover scaling
+  from the entrance/exit scaling on `[data-hub-dot]`.
+- `src/components/experience/closingTransitions.ts`: reversing native scroll
+  during the Contact-to-footer glide could cancel its completion callback and
+  retain `moving`, the temporary input hold and the shared gesture owner forever.
+  Contact recapture now clears all three and cancels the pending release timer.
+- Added `scripts/work-hover-check.js` and `scripts/reverse-navigation-check.js`.
+  Independent development checks passed interrupted-glide recovery, every upward
+  wheel rest from Contact through Hero, forward replay, keyboard reversal,
+  hovered Work/Cases reversal and viewport-height changes, without runtime errors.
+  TypeScript and the production build passed.
+
+Production verification: `scripts/work-hover-check.js` passed eight rapid
+project switches, cursor positioning, keyboard focus, live reduced-motion
+cleanup/re-entry, hovered Work-to-Hero exit and forward replay, and the 390px
+layout. Its 67-frame desktop sample measured p95 20.3ms, with zero of 66 frame
+intervals over 32ms. The largest opacity step in intervals below 26ms was 0.0687,
+compared with the reproduced 0.55 baseline snap. Cursor placement error was less
+than 0.001px after settling. These are local Chrome lab observations.
+
+`scripts/reverse-navigation-check.js` passed the interrupted footer glide,
+Contact recapture and every upward wheel rest through Hero, then forward replay
+to Work, with zero runtime errors. Existing `scripts/visual-check.js` passed:
+the hovered flagship covers the case slot, reverses within 1px, and avoids clipped
+text at 320/390/768/1024px. A separate 390×844 touch-emulation check moved upward
+from scrollY 1800 to 1515.33 with all cards fully readable, no cinematic stage,
+no horizontal overflow and no runtime errors. The final desktop hover screenshot
+was visually reviewed. Physical phones/Safari were not tested for this change.
+No dependencies, commits or deployment were added.
+
+## Completed request: implement the optimization and mobile recommendations
 
 On 2026-10-09 the user requested a detailed whole-site audit, then explicitly
 asked to continue with implementation. The highest-impact loading, mobile,
@@ -219,6 +427,77 @@ stress check, not a physical-device benchmark.
 - All new updates (whole-site optimization, liquid footer, responsive portrait assets, stage navigation, 3-slide case studies, and launch SEO/metadata) committed.
 - Reference directories (`mainiamgereference/` and `WorkImage/`) and temporary test webp files excluded in `.gitignore` per user preference.
 - Local `main` branch updated with all feature commits and cleanly synchronized to `origin/main`.
+
+### 7. Work hover continuity and reverse navigation recovery
+
+- Replaced per-selection GSAP media-context teardown with a persistent,
+  context-safe updater; added deterministic hover-layer media cleanup.
+- Softened inactive-card opacity, shortened hover/cursor response, and separated
+  pointer following from keyboard label placement.
+- Split hub hover scale into wrapper groups and clear/gate selection on Work
+  exit/reset, avoiding competing entrance/exit scale writes.
+- Fixed Contact recapture after an interrupted footer glide by releasing the
+  pending timer, temporary input hold, moving flag and shared gesture owner.
+- Added hover and reverse-navigation regression scripts. TypeScript, production
+  build, desktop interaction/reverse/replay, touch, reduced-motion and existing
+  handoff/responsive checks passed; current measurements are recorded above.
+
+### 8. Adaptive repeated input and navigation cancellation
+
+- Existing gesture ownership now recognizes deliberate repeats, accelerates the
+  active local timeline to 3×, and retains one latest directional request for a
+  safe asynchronous handoff. Tiny sign changes in trackpad tails do not reverse
+  the story; modified/editing/native activation input retains browser behavior.
+- Hero includes Work's local entrance in its owned timeline. Restoration seeks
+  Work to its readable rest; chapter/closing controllers are retained and killed
+  on cancellation. Footer and home glides hurry without restarting their journey.
+- Direct navigation cancels older requests/controllers, including a pending step
+  at the same target. Held keys remain usable in the released native footer.
+- Added `scripts/handoff-input-check.cjs` and `scripts/adaptive-input-check.js`.
+  TypeScript, build, input assertions, production interaction/regression checks,
+  reduced motion and native-touch emulation passed; measurements appear above.
+
+### 9. Single-scroll grouping and restrained wheel pacing
+
+- Reproduced and fixed a real gap in the previous tests: decaying momentum with
+  80ms pauses was mistaken for repeated commands and crossed two boundaries.
+- Wheel repeats now hurry only the current move at 1.8×; they do not queue another
+  forward section. Grouping uses 240ms quiet plus decay detection below 700ms idle,
+  preserving meaningful direction through noisy tails. Keys/navigation remain
+  explicit fast controls, and cancellation/reverse cleanup are preserved.
+- Added `scripts/single-scroll-check.js`, expanded input assertions to 21 groups,
+  and updated the adaptive regression to require one wheel boundary. Production
+  build, replayed single-scroll traces, repeat controls, reverse/replay, shared
+  preview geometry and responsive checks passed. Current evidence appears above.
+
+### 10. Hidden page scrollbar
+
+- Replaced root scrollbar colours with native scrollbar hiding and a WebKit
+  fallback in `src/app/globals.css`, preserving scrolling and motion owners.
+- Desktop wheel/keyboard, reduced-motion keyboard and emulated mobile swipe
+  checks passed with no gutter, horizontal overflow or runtime errors.
+- Physical-device, Firefox and Safari verification remains pending.
+
+### 11. Mobile optimization audit
+
+- Added `doc/MOBILE_AUDIT_2026-11-05.md` with current production evidence.
+- All 35 touch layouts and navigation checks passed; Lighthouse mobile
+  accessibility/best-practices/SEO scored 100/100/100.
+- Reproduced enlarged-text hero clipping, slower-device loading above the good
+  LCP threshold, and liquid-footer frame misses before fallback. Findings remain
+  recommendations; application code was not changed for this audit.
+- Preserved scripts, JSON results, screenshots and Lighthouse reports in the
+  ignored `.shots/mobile-audit-2026-11-05` artifact folder.
+
+### 12. GitHub and Vercel release preparation
+
+- User authorized publication of the current site on 2026-11-05.
+- Confirmed the GitHub remote and created/linked the separate Vercel
+  `personalportfolio` project, preserving the unrelated `personal-portfolio`.
+- Configured Next.js, Node 24.x and the production origin. Existing build,
+  TypeScript and mobile evidence passed; 21/21 input assertions passed again.
+- Release includes the known mobile-audit limitations. Push, deployment and
+  hosted verification are in progress.
 
 ## Update protocol for future AI sessions
 

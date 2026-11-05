@@ -1,5 +1,7 @@
 "use client";
 
+import { registerHandoffInput, resetHandoff, type HandoffInput } from "./handoff";
+
 /**
  * The register the stage's beats agree on, so something below them can put the
  * whole story back to a known state.
@@ -30,14 +32,19 @@ type Beat = {
   order: number;
   reset: () => void;
   settle: () => void;
+  input?: HandoffInput;
 };
 
 const beats = new Map<string, Beat>();
 
 export function registerStageBeat(id: string, beat: Beat) {
   beats.set(id, beat);
+  const unregisterInput = beat.input && registerHandoffInput(id, beat.input);
   return () => {
-    if (beats.get(id) === beat) beats.delete(id);
+    if (beats.get(id) === beat) {
+      beats.delete(id);
+      unregisterInput?.();
+    }
   };
 }
 
@@ -99,6 +106,7 @@ export function stageIsArmed() {
 }
 
 export function resetStage() {
+  resetHandoff();
   released = false;
   travelling = false;
   inOrder().forEach((beat) => beat.reset());

@@ -4,10 +4,10 @@ import type { RefObject } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { getLenis } from "@/components/SmoothScroll";
 import {
-  DOWN_KEYS,
-  UP_KEYS,
   claimHandoff,
+  completeHandoff,
   handoffBusy,
+  isHandoffKey,
   keyStep,
   releaseHandoff,
   wheelStep,
@@ -239,6 +239,9 @@ export function useClosingTransitions({
         let current = 0;
         let moving = false;
         let releaseTimer = 0;
+        let releaseGeneration = 0;
+        let releasing = false;
+        let hurriedRelease = false;
         let reentryUntil = 0;
         let moveTween: gsap.core.Tween | null = null;
 
@@ -272,9 +275,11 @@ export function useClosingTransitions({
           setState(next);
         };
 
-        const swallow = (event: Event) => event.preventDefault();
+        const swallow = (event: Event) => {
+          if (!(event instanceof WheelEvent && event.ctrlKey)) event.preventDefault();
+        };
         const swallowKeys = (event: KeyboardEvent) => {
-          if (DOWN_KEYS.has(event.key) || UP_KEYS.has(event.key)) {
+          if (isHandoffKey(event)) {
             event.preventDefault();
           }
         };
@@ -302,7 +307,8 @@ export function useClosingTransitions({
             target.style.removeProperty("will-change"),
           );
           moving = false;
-          releaseHandoff(ID);
+          moveTween = null;
+          completeHandoff(ID);
 
           if (focusIncoming) {
             const target =
@@ -335,34 +341,87 @@ export function useClosingTransitions({
           });
         };
 
-        const finishRelease = () => {
+        const finishRelease = (generation: number) => {
+          if (generation !== releaseGeneration || !releasing) return;
+          releaseTimer = 0;
+          releasing = false;
           releaseHold();
           moving = false;
           getLenis()?.start();
-          releaseHandoff(ID);
+          completeHandoff(ID);
+        };
+
+        const glideToFooter = (duration: number) => {
+          const generation = ++releaseGeneration;
+          window.clearTimeout(releaseTimer);
+          releaseTimer = 0;
+          const lenis = getLenis();
+          if (lenis) {
+            lenis.scrollTo(afterTop(), {
+              duration,
+              force: true,
+              onComplete: () => {
+                if (generation !== releaseGeneration || !releasing) return;
+                releaseTimer = window.setTimeout(
+                  () => finishRelease(generation), hurriedRelease ? 60 : 520,
+                );
+              },
+            });
+          } else {
+            window.scrollTo({ top: afterTop(), behavior: "smooth" });
+            releaseTimer = window.setTimeout(() => finishRelease(generation), 1200);
+          }
         };
 
         const leaveStage = () => {
           if (moving || handoffBusy(ID)) return;
           moving = true;
+          releasing = true;
+          hurriedRelease = false;
           claimHandoff(ID);
           hold();
           setStageReleased(true);
-          const lenis = getLenis();
-          if (lenis) {
-            lenis.scrollTo(afterTop(), {
-              duration: 1.1,
-              force: true,
-              onComplete: () => { releaseTimer = window.setTimeout(finishRelease, 520); },
-            });
-          } else {
-            window.scrollTo({ top: afterTop(), behavior: "smooth" });
-            releaseTimer = window.setTimeout(finishRelease, 1200);
+          glideToFooter(1.1);
+        };
+
+        const hurry = (speed = 3) => {
+          if (!moving) return;
+          if (!releasing) {
+            if (moveTween) moveTween.timeScale(Math.max(moveTween.timeScale(), speed));
+            return;
           }
+          if (hurriedRelease) return;
+          hurriedRelease = true;
+          if (releaseTimer) {
+            window.clearTimeout(releaseTimer);
+            const generation = releaseGeneration;
+            releaseTimer = window.setTimeout(() => finishRelease(generation), 60);
+          } else if (getLenis()) glideToFooter(1.1 / speed);
         };
 
         const onClosing = () =>
           window.scrollY >= top(0) - 4 && window.scrollY <= top(2) + 4;
+
+        const step = (direction: -1 | 1, keyboard: boolean) => {
+          if (moving || handoffBusy(ID)) return false;
+          if (stageReleased()) {
+            if (direction > 0 || window.scrollY < top(2)) return false;
+            claimHandoff(ID);
+            setStageReleased(false);
+            reentryUntil = 0;
+            seek(2);
+            getLenis()?.stop();
+            jumpTo(top(2));
+            completeHandoff(ID);
+            return true;
+          }
+          if (!onClosing()) return false;
+          const next = current + direction;
+          if (next < 0) return false;
+          if (next > 2) leaveStage();
+          else goTo(next, keyboard);
+          return true;
+        };
 
         const act = (
           step: -1 | 0 | 1,
@@ -390,8 +449,7 @@ export function useClosingTransitions({
 
         const onWheel = (event: WheelEvent) => act(wheelStep(event), event);
         const onKey = (event: KeyboardEvent) => {
-          if (event.metaKey || event.ctrlKey || event.altKey) return;
-          if (!DOWN_KEYS.has(event.key) && !UP_KEYS.has(event.key)) return;
+          if (!isHandoffKey(event)) return;
           act(keyStep(event), event);
         };
 
@@ -399,6 +457,15 @@ export function useClosingTransitions({
           if (stageTravelling()) return;
           if (stageReleased()) {
             if (window.scrollY <= top(2) - 8) {
+              // A scrollbar reversal can cancel the footer glide before its completion callback.
+              window.clearTimeout(releaseTimer);
+              releaseTimer = 0;
+              releaseGeneration++;
+              releasing = false;
+              hurriedRelease = false;
+              releaseHold();
+              moving = false;
+              releaseHandoff(ID);
               setStageReleased(false);
               reentryUntil = performance.now() + 700;
               seek(2);
@@ -448,15 +515,20 @@ export function useClosingTransitions({
           order: 3,
           reset: () => {
             window.clearTimeout(releaseTimer);
-            releaseHandoff(ID);
+            releaseTimer = 0;
+            releaseGeneration++;
+            releasing = false;
+            hurriedRelease = false;
             moveTween?.kill();
             moveTween = null;
             moving = false;
             reentryUntil = 0;
             releaseHold();
+            releaseHandoff(ID);
             seek(0);
           },
           settle,
+          input: { step, hurry },
         });
 
         window.addEventListener("wheel", onWheel, { passive: false });
@@ -466,6 +538,8 @@ export function useClosingTransitions({
         return () => {
           window.clearTimeout(settleId);
           window.clearTimeout(releaseTimer);
+          releaseGeneration++;
+          releasing = false;
           unregister();
           window.removeEventListener("wheel", onWheel);
           window.removeEventListener("keydown", onKey);
