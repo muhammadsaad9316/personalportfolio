@@ -647,6 +647,10 @@
 
 /* ------------------------------------------------------------ breakpoints */
 
+/* Only the mobile composition needs a portrait frame; desktop keeps its stage geometry. */
+.portraitScene { display: contents; }
+.mobileMenu { display: none; }
+
 @media (max-width: 1279px) {
   .copy {
     width: clamp(250px, 27%, 340px);
@@ -696,41 +700,56 @@
 
   .inner {
     min-height: auto;
-    padding-bottom: clamp(26px, 6vh, 52px);
+    padding-block: 18px 0;
   }
 
-  .darkPanel {
-    left: 0;
-    right: 0;
-    top: 46%;
-    bottom: -1px;
-    width: auto;
-  }
-
-  .devGrid {
-    left: 0;
-    top: 46%;
-  }
-
+  .backdropDark,
   .designerGlow {
     display: none;
   }
 
   .header {
     gap: 14px;
+    justify-content: space-between;
   }
 
-  .connect {
-    padding: 10px 15px;
-    font-size: 0.8rem;
-    border-color: rgba(20, 18, 14, 0.22);
-    color: var(--text);
+  .connect { display: none; }
+  .logo { font-size: 1.6rem; }
+  .mobileMenu { display: block; }
+  .mobileMenu summary {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    list-style: none;
   }
+  .mobileMenu summary::-webkit-details-marker { display: none; }
+  .mobileMenu[open] summary { color: var(--accent); }
+  .mobileMenu nav {
+    position: absolute;
+    inset: calc(100% + 10px) 0 auto;
+    display: grid;
+    padding: 8px 20px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--cream);
+    box-shadow: 0 16px 32px -20px rgba(24, 27, 22, 0.3);
+  }
+  .mobileMenu nav a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 52px;
+    font-size: 1rem;
+  }
+  .mobileMenu nav a + a { border-top: 1px solid var(--line); }
+  .mobileMenu nav span { color: var(--accent); }
 
   .stage {
     display: flex;
     flex-direction: column;
-    padding-top: clamp(24px, 5vh, 44px);
+    padding-top: 30px;
   }
 
   .copy,
@@ -748,40 +767,78 @@
   }
 
   .headline {
-    font-size: clamp(2.4rem, 12vw, 3.4rem);
+    margin-top: 19px;
+    font-size: clamp(2rem, 10.6vw, 3.2rem);
+    line-height: 0.98;
   }
+  .lineMask { overflow: visible; }
+  .line { white-space: normal; overflow-wrap: anywhere; }
+  .eyebrow { flex-wrap: wrap; font-size: 0.68rem; letter-spacing: 0.16em; }
 
   .lede {
     max-width: 34ch;
+    margin-top: 22px;
+    font-size: 1.16rem;
+    line-height: 1.4;
+  }
+  .ctaRow { margin-top: 24px; }
+  .cta { width: 100%; min-height: 56px; justify-content: space-between; padding-inline: 26px; border-radius: 999px; font-size: 1rem; font-weight: 600; }
+  .ctaArrow { width: 23px; height: 23px; }
+
+  .portraitScene {
+    display: block;
+    position: relative;
+    isolation: isolate;
+    height: clamp(430px, 116vw, 610px);
+    margin: 30px calc(-1 * var(--gutter)) 0;
+    overflow: hidden;
+  }
+  .portraitScene::before {
+    content: "";
+    position: absolute;
+    inset: 14% -24% -25% 12%;
+    border-radius: 58% 42% 0 0;
+    background: #dfe5cc;
+    rotate: -16deg;
   }
 
   .person {
-    align-self: center;
-    left: auto;
-    margin-left: 0;
-    --person-width: min(66%, 290px);
+    position: absolute;
+    inset: 0 auto auto 50%;
+    --person-width: min(78%, 390px);
     width: var(--person-width);
-    height: clamp(340px, 88vw, 440px);
-    overflow: hidden;
-    margin: clamp(18px, 4vh, 34px) auto 0;
-  }
-
-  .codeCluster {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-top: 0;
-    padding-top: 24px;
-    border-top: 1px solid var(--line-dark);
-    max-height: 185px;
+    height: 100%;
+    margin: 0 0 0 calc(var(--person-width) * -0.5);
     overflow: hidden;
   }
 
-  .codeCluster > .layer {
-    position: static;
-    width: 100%;
+  .designCluster {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+    align-items: end;
+    gap: clamp(32px, 16vw, 110px);
+    position: absolute;
+    inset: auto var(--gutter) 26px;
+    z-index: 5;
+    width: auto;
   }
-
+  .designCluster > .layer + .layer { margin-top: 0; }
+  .designCluster > .layer:nth-child(n + 3) { display: none; }
+  .designCluster > .layer:nth-child(2) { margin-bottom: 28px; }
+  .designCluster > .layer:nth-child(2) .card { width: 100%; }
+  .card { padding: clamp(12px, 3vw, 20px); border-radius: 18px; background: #fffdf8; }
+  .cardTitle { font-size: 0.8rem; }
+  .cardRow, .swatchRing { display: none; }
+  .chart { margin-top: 12px; height: 38px; }
+  .metric { margin-top: 6px; font-size: 1.1rem; }
+  .metricNote { font-size: 0.65rem; }
+  .typeSample { font-size: 2.5rem; color: var(--ink); }
+  .typeName { font-size: 0.63rem; }
+  .swatches { gap: 5px; }
+  .swatches li { width: 11px; }
+  .swatches li:nth-child(2), .swatches li:nth-child(3) { background: var(--accent); }
+  .codeCluster { display: none; }
+  .layer, .reveal, .person, .personReveal { will-change: auto; }
   .personImg {
     height: auto;
     object-position: top center;

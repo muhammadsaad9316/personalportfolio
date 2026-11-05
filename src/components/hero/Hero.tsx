@@ -37,7 +37,7 @@ const portraitProps = (alt: string) => getImageProps({
 }).props;
 const mobilePortrait = getImageProps({
   src: PERSON_SRC, alt: "", width: PERSON_W, height: PERSON_H,
-  quality: 75, sizes: "(max-width: 480px) 59.4vw, 350px",
+  quality: 75, sizes: "(max-width: 499px) 78vw, 390px",
 }).props;
 
 function Portrait({ decorative = false }: { decorative?: boolean }) {
@@ -421,6 +421,27 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
             </ul>
           </nav>
 
+          <details className={styles.mobileMenu} onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.currentTarget.open = false;
+              event.currentTarget.querySelector("summary")?.focus();
+            }
+          }}>
+            <summary aria-label="Navigation menu">
+              <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+                <path d="M4 7h18M4 13h18M4 19h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </summary>
+            <nav aria-label="Mobile primary">
+              {NAV_LINKS.map((item) => (
+                <a key={item.label} href={item.href} onClick={(event) => {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                  if (navigateToStage(item.beat)) event.preventDefault();
+                }}>{item.label}<span aria-hidden="true">↗</span></a>
+              ))}
+            </nav>
+          </details>
+
           <a
             className={styles.connect}
             href="#contact"
@@ -447,6 +468,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
 
           {/* The person is the still centre of the composition: no pointer
               parallax, no entrance travel. Only its lighting changes. */}
+          <div className={styles.portraitScene}>
           <div className={styles.person} data-hero-person>
             <div ref={personRevealRef} className={styles.personReveal}>
               <Portrait />
@@ -461,6 +483,7 @@ const Hero = forwardRef<HeroHandle>(function Hero(_props, ref) {
           </div>
 
           <DesignCluster />
+          </div>
           <CodeCluster />
         </div>
       </div>

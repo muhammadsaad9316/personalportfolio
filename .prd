@@ -14,7 +14,33 @@ Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-
 
 The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. Historical sections describe the state at the time of each task; the latest release section records current publication status. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
 
-## Latest request: optimize images without losing quality
+## Latest request: reference-inspired mobile hero
+
+On 2026-11-05 the user supplied a mobile hero reference and requested its
+direction without an exact copy. Implemented below the existing 900px breakpoint:
+cream hero, native compact menu, wider rounded olive CTA, original portrait over
+a pale asymmetric olive shape, and two existing static design cards. Original
+fonts and copy remain. The terminal/extra cards are hidden in this composition.
+Mobile headline masks allow wrapping, including enlarged text; its background
+stays light while the portrait ground lives in a separate frame.
+
+`Hero.tsx` adds a native `details` menu with Work/Cases/Contact, close-on-selection
+and Escape/focus behavior. `.portraitScene` uses `display: contents` on desktop,
+preserving the existing geometry and GSAP owners. Native cards do not loop and
+have no permanent compositing hints. Mobile portrait sizing now describes its
+larger visible width (78vw, capped at 390px); quality 75 and the source are unchanged.
+
+TypeScript and the isolated production build passed. Default layouts passed at
+320/390/430/768px. Headline bounds fit the actual CSS viewport at both 100% and
+200% root text sizing at those four widths. Touch Work navigation, menu closure,
+keyboard Enter/Escape, reduced-motion visibility and desktop Hero→Work→Hero
+passed. The first desktop test sent input before initialization and timed out;
+the initialized/rested test passed. This does not claim pre-hydration input was
+fixed. Existing broader-page enlarged-text/viewport issues remain outside this
+hero change. Screenshot: `.shots/mobile-hero-final-390.png`. Physical phones and
+Safari remain untested. Uses the existing authorized GitHub/Vercel release flow.
+
+## Earlier request: optimize images without losing quality
 
 On 2026-11-05 the user requested image and delivery optimization without quality
 loss. Six existing PNGs were losslessly recompressed from 3,520,172 to 2,802,806
@@ -574,6 +600,15 @@ stress check, not a physical-device benchmark.
 - Hosted full-size files match the local SHA-256 hashes and expected immutable
   cache headers; homepage and old PNG link return 200. A regeneration rerun made
   no image changes. Existing mobile audit gaps remain.
+
+### 14. Mobile hero reference adaptation
+
+- Adapted the supplied phone composition with a cream hero, olive portrait
+  framing, existing decorative cards, rounded CTA and functional native menu.
+- Retained desktop layout/motion owners; native hero text wraps at larger sizes.
+- Production build/TypeScript, four responsive sizes, eight headline text-size
+  checks, touch/keyboard menu navigation and initialized desktop reversal passed.
+- Updated approved direction and motion documentation. No dependency added.
 
 ## Update protocol for future AI sessions
 

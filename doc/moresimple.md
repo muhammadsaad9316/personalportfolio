@@ -39,6 +39,22 @@ This transformation should be one of the main impressive moments of the website.
 
 ## Hero to Work Transition
 
+### Mobile hero direction — 2026-11-05
+
+Use the user's phone reference as direction, not as an exact replica. Below
+900px, keep the hero cream and editorial: existing Bricolage/Instrument type,
+compact native menu, a full-width rounded olive Work link, and the original
+portrait over an asymmetric pale-olive shape. Bring the existing Dashboard and
+type specimen into the portrait frame as static decorative cards. Hide the
+terminal and extra desktop cards in this composition. Keep enlarged text in
+normal flow, allowing the headline to wrap. The portrait ground belongs to its
+own frame so expanded copy never falls onto a dark background.
+
+Desktop keeps its split Designer/Developer composition and existing motion.
+Mobile navigation offers Work, Case Studies and Contact, closes after selection,
+and supports keyboard disclosure and Escape. Native touch scrolling and reduced
+motion remain available; mobile cards do not loop or follow the pointer.
+
 When the visitor scrolls:
 
 1. The navigation, headline, and floating cards fade away.

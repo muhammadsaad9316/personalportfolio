@@ -100,6 +100,13 @@ pending delivery. Touch and reduced-motion modes keep native scrolling.
 
 ## Device modes
 
+Mobile hero update (2026-11-05): `.portraitScene` is a static relative frame below
+900px and `display: contents` on desktop, preserving the original stage as the
+portrait's desktop positioning context. CSS owns the mobile olive pseudo-element,
+two static existing cards and layout. Native `details` owns mobile menu disclosure;
+React closes it on selection/Escape. Existing GSAP owners and desktop conditions
+are unchanged. No new loops, animation library or transform owner was added.
+
 Use one `gsap.matchMedia()` setup per animated section.
 
 | Mode | Behavior |
