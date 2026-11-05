@@ -12,7 +12,7 @@ Last updated: 2026-11-05. This file records the user's requested changes and the
 
 Use the `portfolio-motion` skill for hero, scroll, Work, case-study, responsive-motion, and animation-performance changes. The stack is Next.js, React, TypeScript, CSS Modules, GSAP/ScrollTrigger, and Lenis. Native WebGL is authorized for the footer liquid requirement; it does not replace GSAP or add a general animation framework. One owner must control each animated DOM property. Honor reduced motion and preserve native touch scrolling and accessible document order.
 
-The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. No dependencies or commits have been added for the changes below. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
+The workspace already contained unrelated uncommitted changes when these edits began. Preserve them. Historical sections describe the state at the time of each task; the latest release section records current publication status. Existing asset names containing `saad` are retained where renaming them would break references; the site's visible identity is Abdullah.
 
 ## Latest request: publish the current site to GitHub and Vercel
 
@@ -29,8 +29,27 @@ using Next.js and Node 24.x. Production domain assigned by Vercel:
 `https://personalportfolio-ten-red.vercel.app`. Configured that origin as
 `NEXT_PUBLIC_SITE_URL` for production metadata and sitemap generation.
 The older Vercel project `personal-portfolio` is connected to a different
-repository and must remain untouched. Publishing and live verification are
-in progress; do not treat the domain as verified live until the release completes.
+repository and remains untouched.
+
+Release application commit `70688569e127350a5c419649bd17014bccf5c602` was pushed
+to GitHub main. Vercel deployment `dpl_8bNDDEWozvxmRKb8M8Qm6XqazbzM` reached
+READY and was assigned the production domain. GitHub's Vercel status is success.
+The project is connected to this GitHub repository with main as its production
+branch, so future pushes can deploy automatically. A direct CLI upload failed
+with a network fetch error; deploying the pushed Git source succeeded.
+
+Hosted verification passed: all five application routes, sitemap and robots
+returned HTTP 200; an unknown project returned 404. Sitemap contains five entries
+with the configured origin; the canonical URL matches production. Hero and case
+image-optimizer requests returned 200. Desktop browser checks confirmed a hidden
+scrollbar with no gutter and a wheel step landing at Work (900px). Runtime touch
+emulation at 390×844 confirmed native stage layout, three case chapters, no
+horizontal overflow, Work/Contact taps and no runtime errors during interaction.
+Initial full-page browser navigation waits timed out while remote assets loaded;
+the interaction checks passed after the scripts loaded. These are hosted smoke
+checks, not a deployed mobile performance benchmark or physical-device test.
+The mobile audit's unresolved issues and placeholder contact/profile details
+remain. No dependencies were added.
 
 ## Earlier request: check whether the site is fully mobile optimized
 
@@ -489,15 +508,20 @@ stress check, not a physical-device benchmark.
 - Preserved scripts, JSON results, screenshots and Lighthouse reports in the
   ignored `.shots/mobile-audit-2026-11-05` artifact folder.
 
-### 12. GitHub and Vercel release preparation
+### 12. GitHub and Vercel production release
 
 - User authorized publication of the current site on 2026-11-05.
 - Confirmed the GitHub remote and created/linked the separate Vercel
   `personalportfolio` project, preserving the unrelated `personal-portfolio`.
 - Configured Next.js, Node 24.x and the production origin. Existing build,
   TypeScript and mobile evidence passed; 21/21 input assertions passed again.
-- Release includes the known mobile-audit limitations. Push, deployment and
-  hosted verification are in progress.
+- Pushed application commit `7068856` to GitHub main and deployed its Git source
+  successfully to `https://personalportfolio-ten-red.vercel.app`.
+- Vercel deployment `dpl_8bNDDEWozvxmRKb8M8Qm6XqazbzM` is READY; GitHub's
+  Vercel check succeeded. Connected the correct repository for future deployments.
+- Hosted routes, metadata, sitemap, image delivery, scrollbar/desktop wheel and
+  emulated touch navigation passed. Known audit and contact-configuration gaps
+  remain; this release does not claim to fix them.
 
 ## Update protocol for future AI sessions
 
